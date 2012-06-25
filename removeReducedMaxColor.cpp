@@ -19,53 +19,105 @@ Mat& createCircle(Mat& I,int cx, int cy, int radius){
 	int maxx,maxy,minx,miny;
 	maxx = I.cols;
 	maxy = I.rows;
-	minx = miny = 0; 
+	minx = 0; miny = 0; 
 	if (cx > maxx || cy > maxy || cx < minx || cy < miny){
 		return I;
 	}
 	for (float angle = 0; angle < 90; angle+=0.25){
 		// X = (cos(angle*PI/180)*radius)
 		// Y = (sin(angle*PI/180)*radius)
-		x = (int)(cos(angle*PI/180)*radius + 0.5);
-		y = (int)(sin(angle*PI/180)*radius + 0.5);
-		if (cx + x <= maxx && cy + y <= maxy){ I.at<cv::Vec3b>(cx + x,cy + y) = {0,255,0};}
-		if (cx + x <= maxx && cy - y >= miny){ I.at<cv::Vec3b>(cx + x,cy - y) = {0,255,0};}
-		if (cx - x >= minx && cy + y <= maxy){ I.at<cv::Vec3b>(cx - x,cy + y) = {0,255,0};}
-		if (cx - x >= minx && cy - y >= miny){ I.at<cv::Vec3b>(cx - x,cy - y) = {0,255,0};}
+		y = (int)abs(cos(angle*PI/180)*radius + 0.5);
+		x = (int)abs(sin(angle*PI/180)*radius + 0.5);
+		if (cx + x <= maxx && cy - y <= maxy){ I.at<cv::Vec3b>(cx + x,cy - y) = {0,0,255};}
+		if (cx + x <= maxx && cy + y >= miny){ I.at<cv::Vec3b>(cx + x,cy + y) = {0,0,255};}
+		if (cx - x >= minx && cy - y <= maxy){ I.at<cv::Vec3b>(cx - x,cy - y) = {0,0,255};}
+		if (cx - x >= minx && cy + y >= miny){ I.at<cv::Vec3b>(cx - x,cy + y) = {0,0,255};}
 	}
 	return I;
 }
-int matchingDegs(Mat &I,cont uchar* const table,int x, int y){
-	int r,g,b,r2,g2,b2,incidence,x2,y2
-	r = I.at<cv::Vec3b>(x,y)[0];
-	g = I.at<cv::Vec3b>(x,y)[1];
-	b = I.at<cv::Vec3b>(x,y)[2];
-	if (r == 255 && g == 255 && b == 255){// TODO replace white for most common color from maxColors matrix
-		return 0;
-	}
-	for (int i = x + 5; i < I.cols; i++){//Min radius is gonna be 5
-		incidence = 0;
-		for (float angle = 0; angle < 90; angle+=0.25){
-			if (incidence == -30){//Let's not bother if we already got 30 unmatching degrees.
-				return 0;
+Mat& findCircles(Mat& I, const uchar* const table){
+	int r,g,b,incidence,x,y,x2,y2,cx,cy,maxx,maxy,minx,miny,ex,ey;
+	maxx = I.cols;
+	maxy = I.rows;
+	minx = miny = 0;//Just for clarity again. Theoretically checks for minx are never needed in this scenario, but well, remove them later 
+	uchar *p = I.ptr<uchar>(0);
+	uchar *root = p;
+	int curp = 0;
+	uchar *xy;
+	for (y = 0; y < maxy; y++){
+		cout << "Pointing to " << y<<endl;
+		for(x = 0; x < (maxx*3); x+=3){
+			//cout << "Starting circles x: " << x << ". y: " << y << endl;
+			curp+=3;
+			r = p[curp];
+			g = p[curp+1];
+			b = p[curp+2];
+			cy = y; //Just for clarity
+//			cout << "Checking x: " << x << ". y: " << y << ". x2: " << x2 << ". y2: " << y2 << " " << endl;
+			if (r == 255 && g == 255 && b == 255){// TODO replace white for most common color from maxColors matrix
+//				cout << "White" << endl;
+				continue;
 			}
-			x2 = (int)(cos(angle*PI/180)*i + 0.5);
-			y2 = (int)(sin(angle*PI/180)*i + 0.5);
-//			if ((x + (x2 - x)/2) - x >= minx && cy + y <= maxy){ I.at<cv::Vec3b>(cx - x,cy + y) = {0,255,0};}//TODO Just copy pasted
-//			if ((x + (x2 - x)/2) - x >= minx && cy - y >= miny){ I.at<cv::Vec3b>(cx - x,cy - y) = {0,255,0};}
+			for (int i = x + 5; i < maxx; i+=2){//Min radius is gonna be 5
+				incidence = 0;
+				cx = x + (i/2);
+				for (int angle = 1; angle < 89; angle+=2){
+					if (incidence == -80){//Let's not boher if we already got 30 unmatching degrees.
+						continue;
+					}
+					x2 = (int)(cos(angle*PI/180)*(i/2) + 0.5);//i is diameter.
+					y2 = (int)(sin(angle*PI/180)*(i/2) + 0.5);//x2 and y2 are relative points to the center of the hypotetical circle
+//					cout << "Checking x: " << x << ". y: " << y << ". Checking x2: " << x2 << ". y2: " << y2 << ". Angle: " << angle << endl;
+					if (cx + x2 < maxx && cy + y2 < maxy){
+//						cout << "1 cycle" << endl;
+						ex = cx + x2;
+						ey = cy + y2;
+						if (table[root[(ey*maxx)+ex]] == table[r] && table[root[(ey*maxx)+ex+1]] == table[g] && table[root[(ey*maxx)+ex+2]] == table[b]){
+							incidence++;
+						}else{
+							incidence--;
+						}
+					}
+					if (cx + x2 < maxx && cy - y2 >= miny){
+//						cout << "2 cycle" << endl;
+						ex = cx + x2;
+						ey = cy - y2;
+						if (table[root[(ey*maxx)+ex]] == table[r] && table[root[(ey*maxx)+ex+1]] == table[g] && table[root[(ey*maxx)+ex+2]] == table[b]){
+							incidence++;
+						}else{
+							incidence--;
+						}
+					}
+					if (cx - x2 >= minx && cy + y2 < maxy){
+//						cout << "3 cycle" << endl;
+						ex = cx - x2;
+						ey = cy + y2;
+						if (table[root[(ey*maxx)+ex]] == table[r] && table[root[(ey*maxx)+ex+1]] == table[g] && table[root[(ey*maxx)+ex+2]] == table[b]){
+							incidence++;
+						}else{
+							incidence--;
+						}
+					}
+					if (cx - x2 >= minx && cy - y2 >= miny){
+//						cout << "4 cycle" << endl;
+						ex = cx - x2;
+						ey = cy - y2;
+						if (table[root[(ey*maxx)+ex]] == table[r] && table[root[(ey*maxx)+ex+1]] == table[g] && table[root[(ey*maxx)+ex+2]] == table[b]){
+							incidence++;
+						}else{
+							incidence--;
+						}
+					}
+				}
+				if (incidence > 20){
+					I = createCircle(I,y,cx,i);
+					cout << "Creating circle cx: " << cx << ". y: " << y << ". i:" << i <<endl;
+				}
+			}
+//			cout << "Incidence: " << incidence << endl;
 		}
 	}
-	if (table[p[j-3]] == rgb[0] && table[p[j-2]] == rgb[1] && table[p[j-1]] == rgb[2]){
-//	I = createCircle(I,100,100,200);
-}
-
-Mat& findCircles(Mat& I, const uchar* const table, int nCols, int nRows){
-	int r,g,b;
-	for (int y = 0; y < I.rows; y++){
-		for(int x = 0; x < nRows; ++x){
-			matchingDegs(I,table,x,y);
-		}
-	}
+	return I;
 }
 
 Mat& scanImageAndReduce(Mat& I, const uchar* const table){
@@ -75,8 +127,7 @@ Mat& scanImageAndReduce(Mat& I, const uchar* const table){
 	int channels = I.channels();
 	int nRows = I.rows * channels;
 	int nCols = I.cols;
-	int yMax = nCols;
-	cout <<  "nCols: " << nCols << ". nRows: " << nRows << ". Channels: " << channels<< ". nRows/channels: " << (nRows/channels) << " "<< ". Checking continuity: " <<endl;
+	cout <<  "nCols: " << nCols << ". nRows: " << nRows << ". Channels: " << channels<< ". nRows/channels: " << (nRows/channels) << " "<< ". After continuity: " <<endl;
 	if (I.isContinuous()){
 		nCols *= nRows;
 		nRows = 1;
@@ -126,8 +177,8 @@ Mat& scanImageAndReduce(Mat& I, const uchar* const table){
 			}
 		}
 	}
-	I = findColors(I,table,nCols,nRows);
-	return I;
+	//return I;
+	return findCircles(I,table);
 }
 
 int main( int argc, char** argv){ 
@@ -150,14 +201,13 @@ int main( int argc, char** argv){
 	stringstream s;
 	s << argv[2];
 	s >> divideWith;
-   if (!s){
+	if (!s){
 		cout << "Invalid number entered for dividing. " << endl;
 		return -1;
 	}
 	uchar table[256];
 	for (int i = 0; i < 256; ++i)
 	   table[i] = (i/divideWith) * divideWith;
-//	Mat outputImg = scanImageAndReduce(inputImg,table);
 	Mat outputImg = scanImageAndReduce(inputImg,table);
 	namedWindow( "Display window", CV_WINDOW_AUTOSIZE );// Create a window for display.
 	imshow( "Display window", outputImg );				   // Show our image inside it.
