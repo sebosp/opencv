@@ -1,0 +1,10 @@
+[Unit]
+Description=Arduino values puller
+
+[Service]
+PIDFile=/var/run/ardpuller.pid
+ExecStart=/usr/local/bin/ardPuller.py
+Restart=on-abort
+
+[Install]
+WantedBy=multi-user.target

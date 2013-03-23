@@ -1,0 +1,10 @@
+[Unit]
+Description=Arduino connect/disconnect Watcher
+
+[Service]
+PIDFile=/var/run/ardwatcher.pid
+ExecStart=/usr/local/bin/ardWatcher.py
+Restart=on-abort
+
+[Install]
+WantedBy=multi-user.target
