@@ -26,6 +26,7 @@ if __name__ == '__main__':
 	#ardPort = "/dev/ttyACM0" #should be in a conf file
 	#my $ardLocation = `udevadm info -a -p \$(udevadm info -q path -n $ardDev)`; or use this to make sure this is an arduino
 	#Better use lsusb and avoid this nasty idea, got a webcam that is USB ACM and screws it all
+	#Or use inotify?
 	print "ardPort: ",ardPort
 	ser = serial.Serial(ardPort, 9600)
 	temp=light=slide=volvalue=vollimitup=vollimitdown=volstep=0
@@ -40,7 +41,7 @@ if __name__ == '__main__':
 	if volData:
 		vollimitdown = volData.group(1)
 		vollimitup   = volData.group(2)
-		volvalue     = volData.group(3)
+		volvalue     = int(volData.group(3))
 	else:
 		print "AMIXER -c 0 cget name='",audioIface,"' didnt return the right results"
 		sys.exit()
@@ -69,21 +70,21 @@ if __name__ == '__main__':
 		if sensorsLine:
 			temp  = sensorsLine.group(1)
 			light = sensorsLine.group(2)
-			slide = sensorsLine.group(3)
+			slide = int(sensorsLine.group(3))
 			curtime = datetime.datetime.now()
 			tempArray.append(DataPoint(curtime,float(temp)))
 			lightArray.append(DataPoint(curtime,float(light)))
 			softArray.append(DataPoint(curtime,float(slide)))
 			#sys.stdout.write("[PULL] "+temp+".."+light+".."+slide+" from: "+sensors)
 			#print "[PULL] ",float(temp),"..",float(light),"..",float(slide)
-			volvalue = os.popen(AMIXER+" -c 0 cget name='"+audioIface+"'|grep :|cut -f2 -d=").read()
+			volvalue = int(os.popen(AMIXER+" -c 0 cget name='"+audioIface+"'|grep :|cut -f2 -d=|cut -d, -f1").read())
 			if slide > 240:
 				if volvalue < vollimitup:
 					volvalue+=volstep
 					print "[INFO]: Setting Volume + 10 = ",volvalue
-				os.popen(AMIXER+" -q cset name='"+audioIface+"' "+volvalue).read()
+					os.popen(AMIXER+" -q cset name='"+audioIface+"' "+str(volvalue)).read()
 			elif slide < 20:
 				if volvalue > vollimitdown:
 					volvalue-=volstep
 					print "[INFO]: Setting Volume - 10 = ",volvalue
-				os.popen(AMIXER+" -q cset name='"+audioIface+"' "+volvalue).read()
+					os.popen(AMIXER+" -q cset name='"+audioIface+"' "+str(volvalue)).read()
