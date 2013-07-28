@@ -19,13 +19,13 @@ GLfloat remnants2D[6];
 GLuint vbo_triangle;
 GLuint program;
 GLint attribute_coord2d;
+
 void addRemnants2D(float newx, float newy){
 	for(int i=0;i<4;i++){//Shift
 		remnants2D[i]=remnants2D[i+2];
 	}
 	remnants2D[4]=newx;
 	remnants2D[5]=newy;
-  	/* Describe our vertices array to OpenGL (it can't guess its format automatically) */
 }
 
 GLfloat* generateNGon(float radius,float strokewidth,int sides){
@@ -37,7 +37,7 @@ GLfloat* generateNGon(float radius,float strokewidth,int sides){
 	float y2 = 0;
 	float tempArray[6] = {0,0,x1,y1,x2,y2};
 	std::copy(tempArray,tempArray+sizeof(tempArray)/sizeof(tempArray[0]),remnants2D);
-	//2 dimensions * 2  * 3 vertex per calculation per degree, 360 degrees
+	//2 dimensions * 2 triangels * 3 vertex per calculation per step
 	int curpos = 0;
 	int i = 0;
 	int steps = 360/sides;
@@ -50,12 +50,10 @@ GLfloat* generateNGon(float radius,float strokewidth,int sides){
 		for(i=0;i<6;i++){
 			circlePoints[curpos++]=remnants2D[i];
 		}
-		//curpos+=6;//3 2D triangle vertices
 		//Outter radius
 		y2 = (sin(angle*PI/180)*r2);
 		x2 = (cos(angle*PI/180)*r2);
 		addRemnants2D(x2,y2);
-		//curpos+=6;
 		for(i=0;i<6;i++){
 			circlePoints[curpos++]=remnants2D[i];
 		}
@@ -66,23 +64,11 @@ GLfloat* generateNGon(float radius,float strokewidth,int sides){
 
 int init_resources(){
   glGenBuffers(1, &vbo_triangle);
-  //int totalVertices = generateNGon(0.8,0.005,5);
-  //printf("Triangles assigned, got [%i] vertices\n",totalVertices);
-  /* Push each element in buffer_vertices to the vertex shader */
-  //glDrawArrays(GL_TRIANGLES, 0, totalVertices);
-  //totalVertices = generateNGon(0.75,0.005,5);
-  //printf("Triangles assigned, got [%i] vertices\n",totalVertices);
-  /*GLfloat triangle_vertices[] = {
-     0.0,  0.8,
-    -0.8, -0.8,
-     0.8, -0.8,
-  };*/
   int sides = 5;
-  //triangle_vertices = generateNGon(0.8,0.005,sides);
   GLfloat *triangle_vertices = generateNGon(0.8,0.005,sides);
   glGenBuffers(1, &vbo_triangle);
   glBindBuffer(GL_ARRAY_BUFFER, vbo_triangle);
-  glBufferData(GL_ARRAY_BUFFER, sizeof(GLfloat)*2*3*2*(360/5), triangle_vertices, GL_STATIC_DRAW);
+  glBufferData(GL_ARRAY_BUFFER, sizeof(GLfloat)*2*3*2*(360/sides), triangle_vertices, GL_STATIC_DRAW);
   GLint link_ok = GL_FALSE;
 
   GLuint vs, fs;
@@ -109,7 +95,6 @@ int init_resources(){
 }
 
 void onDisplay(){
-  //glClearColor(1.0, 1.0, 1.0, 1.0);
   glClearColor(0.0, 0.0, 0.0, 1.0);
   glClear(GL_COLOR_BUFFER_BIT);
   glUseProgram(program);
@@ -134,8 +119,9 @@ void free_resources(){
 
 void Keyboard(unsigned char key, int x, int y){
 	switch (key){
-		case 27:             // ESCAPE key
-		exit (0);
+		case 27:
+			free_resources();
+			exit (0);
 		break;
 	}
 }
