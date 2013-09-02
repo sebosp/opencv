@@ -24,10 +24,10 @@ int sides = 5;
 GLfloat* generateNGon(float radius){
 	int steps = 360/sides;
 	GLfloat* circlePoints = new GLfloat[2*sides];
-	int curpos = 0;
+	int curpos = -1;
 	for (int angle = 0; angle < 360; angle+=steps){
-		circlePoints[curpos++]=(cos(angle*PI/180)*radius);
-		circlePoints[curpos++]=(sin(angle*PI/180)*radius);
+		circlePoints[++curpos]=(cos(angle*PI/180)*radius);
+		circlePoints[++curpos]=(sin(angle*PI/180)*radius);
 	}
 	return circlePoints;
 }
@@ -37,7 +37,7 @@ int init_resources(){
   GLfloat *vertices = generateNGon(0.8);
   glGenBuffers(1, &vbo_vertices);
   glBindBuffer(GL_ARRAY_BUFFER, vbo_vertices);
-  glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
+  glBufferData(GL_ARRAY_BUFFER, sizeof(GLfloat)*sides*2, vertices, GL_STATIC_DRAW);
   glBindBuffer(GL_ARRAY_BUFFER, 0);
  
   GLushort elements[sides];
@@ -88,9 +88,7 @@ void onDisplay(){
   );
  
   glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ibo_elements);
-  glDrawElements(GL_LINES, 2,GL_UNSIGNED_SHORT,0);
-  glDrawElements(GL_LINE_LOOP, 2,GL_UNSIGNED_SHORT,(GLvoid*)(2*sizeof(GLushort)));
-  glDrawElements(GL_LINE_LOOP, 2,GL_UNSIGNED_SHORT,(GLvoid*)(4*sizeof(GLushort)));
+  glDrawElements(GL_LINE_LOOP, sides,GL_UNSIGNED_SHORT,0);
   glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
  
   glDisableVertexAttribArray(attribute_coord2d);
