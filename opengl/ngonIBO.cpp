@@ -19,7 +19,7 @@ GLuint vbo_vertices;
 GLuint ibo_elements;
 GLuint program;
 GLint attribute_coord2d;
-int sides = 5;
+int sides = 7;
 
 GLfloat* generateNGon(float radius){
 	int steps = 360/sides;
