@@ -30,7 +30,7 @@ def statDays(mtype,mArray):
 				"$gt":timerange
 			},
 			unicode(mtype):{
-				"$gt":maxValue
+				"$gte":maxValue
 			}
 		}
 		minQuery={
@@ -38,17 +38,17 @@ def statDays(mtype,mArray):
 				"$gt":timerange
 			},
 			unicode(mtype):{
-				"$lt":minValue
+				"$lte":minValue
 			}
 		}
 		if collection.find(maxQuery).count() == 0:
-			print("Pushing Over new MAX "+mtype+" ["+str(maxValue)+"] in last "+str(i)+" day(s)")
-			print maxQuery
+			sys.stderr.write("Pushing Over new MAX "+mtype+" ["+str(maxValue)+"] in last "+str(i)+" day(s) ")
+			sys.stderr.write(str(maxQuery)+"\n")
 			pushOver(mtype+" new MAX ",str(i) + (" day" if i == 1 else " days"),maxValue);
 			break
 		if collection.find(minQuery).count() == 0:
-			print("Pushing Over new MIN "+mtype+" ["+str(minValue)+"] in last "+str(i)+" day(s)")
-			print minQuery
+			sys.stderr.write("Pushing Over new MIN "+mtype+" ["+str(minValue)+"] in last "+str(i)+" day(s) ")
+			sys.stderr.write(str(minQuery)+"\n")
 			pushOver(mtype+" new MIN ",str(i) + (" day" if i == 1 else " days"),minValue);
 			break
 
@@ -100,7 +100,7 @@ if __name__ == '__main__':
 		sensorsRegEx = re.compile("Temp: ([0-9.]*). Light: (\d{0,3}). softPot: (\d{0,3})")
 		sensorsLine = sensorsRegEx.search(sensors)
 		if i == 10:
-			sys.stderr.write("mongodb...\n")
+			sys.stderr.write("Saving to mongodb...\n")
 			#client.write_key("light", lightArray)
 			#client.write_key("soft", softArray)
 			#client.write_key("temp", tempArray)

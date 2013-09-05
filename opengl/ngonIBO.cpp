@@ -12,96 +12,88 @@
 #include <GL/glut.h>
 #include "shader_utils.h"
 #include <math.h>
-
 #define PI 3.1415926535897932384626433832795
-
-GLuint vbo_vertices;
-GLuint ibo_elements;
 GLuint program;
 GLint attribute_coord2d;
-int sides = 7;
 
-GLfloat* generateNGon(float radius){
-	int steps = 360/sides;
-	GLfloat* circlePoints = new GLfloat[2*sides];
-	int curpos = -1;
-	for (int angle = 0; angle < 360; angle+=steps){
-		circlePoints[++curpos]=(cos(angle*PI/180)*radius);
-		circlePoints[++curpos]=(sin(angle*PI/180)*radius);
+class NGon{
+private:
+	GLuint vbo_vertices,ibo_elements;
+	int sides;
+public:
+	NGon(int nsides): vbo_vertices(0),ibo_elements(0){sides=nsides;};
+	~NGon(){
+		if (vbo_vertices != 0)
+			glDeleteBuffers(1, &vbo_vertices);
+		if (ibo_elements != 0)
+			glDeleteBuffers(1, &ibo_elements);
 	}
-	return circlePoints;
-}
+	GLfloat* generateNGon(float radius,int rotate){
+		GLfloat* circlePoints = new GLfloat[2*this->sides];
+		int curpos = -1;
+		int angle = rotate;
+		int steps = 360/this->sides;
+		for (int i = 0; i<this->sides;i++){
+			circlePoints[++curpos]=(cos(angle*PI/180)*radius);
+			circlePoints[++curpos]=(sin(angle*PI/180)*radius);
+			angle+=steps;
+		}
+		return circlePoints;
+	}
  
 
-int init_resources(){
-  GLfloat *vertices = generateNGon(0.8);
-  glGenBuffers(1, &vbo_vertices);
-  glBindBuffer(GL_ARRAY_BUFFER, vbo_vertices);
-  glBufferData(GL_ARRAY_BUFFER, sizeof(GLfloat)*sides*2, vertices, GL_STATIC_DRAW);
-  glBindBuffer(GL_ARRAY_BUFFER, 0);
- 
-  GLushort elements[sides];
-  for(int i=0;i<sides;i++)elements[i]=i;
-  glGenBuffers(1, &ibo_elements);
-  glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ibo_elements);
-  glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(elements), elements, GL_STATIC_DRAW);
-  glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
+	void init_resources(){
+		GLfloat *vertices = generateNGon(0.8,0);
+		glGenBuffers(1, &this->vbo_vertices);
+		glBindBuffer(GL_ARRAY_BUFFER, this->vbo_vertices);
+		glBufferData(GL_ARRAY_BUFFER, sizeof(GLfloat)*this->sides*2, vertices, GL_STATIC_DRAW);
+		glBindBuffer(GL_ARRAY_BUFFER, 0);
+		
+		GLushort elements[this->sides];
+		for(int i=0;i<this->sides;i++)elements[i]=i;
+		glGenBuffers(1, &this->ibo_elements);
+		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, this->ibo_elements);
+		glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(elements), elements, GL_STATIC_DRAW);
+		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
 
-  GLint link_ok = GL_FALSE;
+	}
 
-  GLuint vs, fs;
-  if ((vs = create_shader("triangle.v.glsl", GL_VERTEX_SHADER))   == 0) return 0;
-  if ((fs = create_shader("triangle.f.glsl", GL_FRAGMENT_SHADER)) == 0) return 0;
-
-  program = glCreateProgram();
-  glAttachShader(program, vs);
-  glAttachShader(program, fs);
-  glLinkProgram(program);
-  glGetProgramiv(program, GL_LINK_STATUS, &link_ok);
-  if (!link_ok) {
-    fprintf(stderr, "glLinkProgram:");
-    print_log(program);
-    return 0;
-  }
-  const char* attribute_name = "coord2d";
-  attribute_coord2d = glGetAttribLocation(program, attribute_name);
-  if (attribute_coord2d == -1){
-    fprintf(stderr, "Could not bind attribute %s\n", attribute_name);
-    return 0;
-  }
-  return 1;
-}
+	void onDisplay(){
+		glBindBuffer(GL_ARRAY_BUFFER, this->vbo_vertices);
+		glVertexAttribPointer(
+			attribute_coord2d, // attribute
+			2,                 // number of elements per vertex, here (x,y)
+			GL_FLOAT,          // the type of each element
+			GL_FALSE,          // take our values as-is
+			0,                 // no extra data between each position
+			0  		       // Offset
+		);
+		
+		glBindBuffer(GL_ARRAY_BUFFER, 0);
+		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, this->ibo_elements);
+		glDrawElements(GL_LINE_LOOP, this->sides,GL_UNSIGNED_SHORT,0);
+		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
+		
+	}
+};
+NGon rectangle(4);
+NGon pentagon(5);
+NGon heptagon(6);
 
 void onDisplay(){
-  glClearColor(0.0, 0.0, 0.0, 1.0);
-  glClear(GL_COLOR_BUFFER_BIT);
-  glUseProgram(program);
-  glBindBuffer(GL_ARRAY_BUFFER, vbo_vertices);
-  glEnableVertexAttribArray(attribute_coord2d);
-  glVertexAttribPointer(
-    attribute_coord2d, // attribute
-    2,                 // number of elements per vertex, here (x,y)
-    GL_FLOAT,          // the type of each element
-    GL_FALSE,          // take our values as-is
-    0,                 // no extra data between each position
-    0  		       // Offset
-  );
- 
-  glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ibo_elements);
-  glDrawElements(GL_LINE_LOOP, sides,GL_UNSIGNED_SHORT,0);
-  glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
- 
-  glDisableVertexAttribArray(attribute_coord2d);
-  glBindBuffer(GL_ARRAY_BUFFER, 0);
-  glutSwapBuffers();
+	glClearColor(0.0, 0.0, 0.0, 1.0);
+	glClear(GL_COLOR_BUFFER_BIT);
+	glUseProgram(program);
+	glEnableVertexAttribArray(attribute_coord2d);
+	rectangle.onDisplay();
+	pentagon.onDisplay();
+	heptagon.onDisplay();
+	glDisableVertexAttribArray(attribute_coord2d);
+	glutSwapBuffers();
 }
-
 void free_resources(){
-  glDeleteProgram(program);
-  glDeleteBuffers(1, &vbo_vertices);
-  glDeleteBuffers(1, &ibo_elements);
+	glDeleteProgram(program);
 }
-
 void Keyboard(unsigned char key, int x, int y){
 	switch (key){
 		case 27:
@@ -110,33 +102,58 @@ void Keyboard(unsigned char key, int x, int y){
 		break;
 	}
 }
-
-int main(int argc, char* argv[]){
-  glutInit(&argc, argv);
-  glutInitDisplayMode(GLUT_RGBA|GLUT_ALPHA|GLUT_DOUBLE|GLUT_DEPTH);
-  glutInitWindowSize(640, 480);
-  glutCreateWindow("NGon");
-
-  GLenum glew_status = glewInit();
-  glutKeyboardFunc (Keyboard);
-  if (glew_status != GLEW_OK){
-    fprintf(stderr, "Error: %s\n", glewGetErrorString(glew_status));
-    return EXIT_FAILURE;
-  }
-
-  if (!GLEW_VERSION_2_0) {
-    fprintf(stderr, "Error: your graphic card does not support OpenGL 2.0\n");
-    return 1;
-  }
-
-  if (init_resources()) {
-    glutDisplayFunc(onDisplay);
-    glEnable(GL_BLEND);
-    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-    glutMainLoop();
-  }
-
-  free_resources();
-  return EXIT_SUCCESS;
+int init_resources(){
+	rectangle.init_resources();
+	pentagon.init_resources();
+	heptagon.init_resources();
+	GLint link_ok = GL_FALSE;
+	GLuint vs, fs;
+	if ((vs = create_shader("triangle.v.glsl", GL_VERTEX_SHADER))   == 0) return 0;
+	if ((fs = create_shader("triangle.f.glsl", GL_FRAGMENT_SHADER)) == 0) return 0;
+	
+	program = glCreateProgram();
+	glAttachShader(program, vs);
+	glAttachShader(program, fs);
+	glLinkProgram(program);
+	glGetProgramiv(program, GL_LINK_STATUS, &link_ok);
+	if (!link_ok) {
+		fprintf(stderr, "glLinkProgram:");
+		print_log(program);
+		return 0;
+	}
+	const char* attribute_name = "coord2d";
+	attribute_coord2d = glGetAttribLocation(program, attribute_name);
+	if (attribute_coord2d == -1){
+		fprintf(stderr, "Could not bind attribute %s\n", attribute_name);
+		return 0;
+	}
+	return 1;
 }
 
+int main(int argc, char* argv[]){
+	glutInit(&argc, argv);
+	glutInitDisplayMode(GLUT_RGBA|GLUT_ALPHA|GLUT_DOUBLE|GLUT_DEPTH);
+	glutInitWindowSize(640, 480);
+	glutCreateWindow("NGon");
+	
+	GLenum glew_status = glewInit();
+	glutKeyboardFunc (Keyboard);
+	if (glew_status != GLEW_OK){
+		fprintf(stderr, "Error: %s\n", glewGetErrorString(glew_status));
+		return EXIT_FAILURE;
+	}
+	
+	if (!GLEW_VERSION_2_0) {
+		fprintf(stderr, "Error: your graphic card does not support OpenGL 2.0\n");
+		return 1;
+	}
+	
+	if (init_resources()) {
+		glutDisplayFunc(onDisplay);
+		glEnable(GL_BLEND);
+		glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+		glutMainLoop();
+	}
+	free_resources();
+	return EXIT_SUCCESS;
+}
