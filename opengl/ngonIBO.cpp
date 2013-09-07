@@ -148,7 +148,7 @@ void onIdle() {
 	float close = ((glutGet(GLUT_ELAPSED_TIME)%((int)maxNGons * 1000)) / 1000.0);
 	glm::mat4 model = glm::translate(glm::mat4(1.0f), glm::vec3(0.0, 0.0, -maxNGons+close));
 	glm::mat4 view = glm::lookAt(glm::vec3(0.0, 0.0, 0.0), glm::vec3(0.0, 0.0, -maxNGons+close), glm::vec3(0.0, 1.0, 0.0));
-	glm::mat4 projection = glm::perspective(45.0f, 1.0f*screen_width/screen_height, 0.1f, 20.0f);
+	glm::mat4 projection = glm::perspective(45.0f, 1.0f*screen_width/screen_height, 0.1f, (float)(maxNGons)/2);
 	glm::mat4 mvp = projection * view * model;
 	glUseProgram(program);
 	glUniformMatrix4fv(uniform_mvp, 1, GL_FALSE, glm::value_ptr(mvp));
