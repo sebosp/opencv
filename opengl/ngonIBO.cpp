@@ -108,23 +108,38 @@ public:
 		glDrawElements(GL_LINE_LOOP, this->sides,GL_UNSIGNED_SHORT,0);
 		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
 	}
+	//call me onDispla on main
+	void displayAll(){
+		if(this->next != NULL){
+			this->next->displayAll();
+		}
+		this->onDisplay();
+	}
+	//Call me on free_resources on main
+	void deleteAll(){
+		if(this->next != NULL){
+			this->next->deleteAll();
+			delete(this->next);
+		}
+	}
+	//Call me on init_resources on main
+	void initAll(){
+		if(this->next != NULL){
+			this->next->initAll();
+		}
+		this->init_resources();
+	}
 };
 NGon *parent;
 
-void displayNGons(NGon *p){
-	if(p == NULL){
-		return;
-	}
-	displayNGons(p->next);
-	p->onDisplay();
-}
 void onDisplay(){
 	glClearColor(0.0, 0.0, 0.0, 1.0);
 	glClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT);
 	glUseProgram(program);
 	glEnableVertexAttribArray(attribute_coord3d);
 	glEnableVertexAttribArray(attribute_v_color);
-	displayNGons(parent);
+	if (parent)
+		parent->displayAll();
 	glDisableVertexAttribArray(attribute_coord3d);
 	glDisableVertexAttribArray(attribute_v_color);
 	glutSwapBuffers();
@@ -139,23 +154,10 @@ void onIdle() {
 	glUniformMatrix4fv(uniform_mvp, 1, GL_FALSE, glm::value_ptr(mvp));
 	glutPostRedisplay();
 }
-void deleteNGons(NGon *p){
-	if(p == NULL){
-		return;
-	}
-	deleteNGons(p->next);
-	delete(p);
-}
-void initNGons(NGon *p){
-	if(p == NULL){
-		return;
-	}
-	initNGons(p->next);
-	p->init_resources();
-}
 void free_resources(){
 	glDeleteProgram(program);
-	deleteNGons(parent);
+	if (parent)
+		parent->deleteAll();
 }
 void Keyboard(unsigned char key, int x, int y){
 	switch (key){
@@ -166,7 +168,7 @@ void Keyboard(unsigned char key, int x, int y){
 	}
 }
 int init_resources(){
-	initNGons(parent);
+	parent->initAll();
 	GLint link_ok = GL_FALSE;
 	GLuint vs, fs;
 	if ((vs = create_shader("triangle.v.glsl", GL_VERTEX_SHADER))   == 0) return 0;
