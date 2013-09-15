@@ -21,7 +21,7 @@
 GLuint program;
 GLint attribute_coord3d,attribute_v_color,uniform_mvp;
 int screen_width=640, screen_height=480;
-int maxNGons=80.0f;
+int maxNGons=80.0f;//XXX
 NGon *parent;
 
 void onDisplay(){
@@ -38,6 +38,7 @@ void onDisplay(){
 }
 void onIdle() {
 	float close = ((glutGet(GLUT_ELAPSED_TIME)%((int)maxNGons * 1000)) / 1000.0);
+	close = 78.0f;
 	glm::mat4 model = glm::translate(glm::mat4(1.0f), glm::vec3(0.0, 0.0, -maxNGons+close));
 	glm::mat4 view = glm::lookAt(glm::vec3(0.0, 0.0, 0.0), glm::vec3(0.0, 0.0, -maxNGons+close), glm::vec3(0.0, 1.0, 0.0));
 	glm::mat4 projection = glm::perspective(45.0f, 1.0f*screen_width/screen_height, 0.1f, (float)(maxNGons)/2);
@@ -98,26 +99,45 @@ int init_resources(){
 	return 1;
 }
 void initNGons(){
-	NGon *tmp;
-	float r,g,b;
+	GLfloat r,g,b,cx,cy,jx,jy;
 	r = 0.0f;
 	g = 1.0f;
 	b = 0.0f;
-	parent = new NGon(40,0.04f,r,g,b,1.0f);
-	int elements=40*6;//x,y,z,r,g,b
-	tmp = parent;
-	printf("Initializing %i NGon IBOs\n",maxNGons);
-	for(float i = 0.0f;i<maxNGons;i+=1.0f){
-		r=i/maxNGons;
-		g=1.0f - i/maxNGons;
-		b=i/maxNGons/2;
-		tmp->next = new NGon(4+(int)i,i,r,g,b,1.0f);
-		if(tmp->next == NULL){
-			break;
+	GLfloat radius = 0.1f;
+	GLfloat x = 0.0f;
+	GLfloat y = 0.0f;
+	printf("Initializing NGon IBOs\n");
+	int ngonSides=40;
+	parent = new NGon(ngonSides,r,g,b,1.0f,0.1f,x,y,0.04f);
+	NGon *tmp = parent;
+	GLfloat sides=6.0f;GLfloat anglestep=(360.0f/sides);
+	int elements=ngonSides*(int)sides;//x,y,z,r,g,b
+	for(GLfloat i=0.0f;i<sides;i+=1.0f){
+		cx=0.0f;
+		cy=0.0f;
+		elements+=ngonSides*(int)sides;//x,y,z,r,g,b per polygon vertex
+		for(GLfloat j=1.0f;j<sides;j+=1.0f){
+			jx=cx+cos(i*anglestep*PI/180)*radius*j;
+			jy=cy+sin(i*anglestep*PI/180)*radius*j;
+			for(GLfloat d=sides - 1.0f;d>=0.0f;d-=1.0f){
+				x=jx + cos((i*anglestep+anglestep)*PI/180)*d*radius;
+				y=jy + sin((i*anglestep+anglestep)*PI/180)*d*radius;
+				if(fabs(x) < 0.8f && fabs(y) < 0.8f){
+					tmp->next = new NGon(ngonSides,r,g,b,1.0f,radius,x,y,0.04f);
+					if(tmp->next == NULL){
+						break;
+					}
+					tmp = tmp->next;
+					elements+=ngonSides*(int)sides;//x,y,z,r,g,b per polygon vertex
+				}
+			}
+
 		}
-		tmp = tmp->next;
-		elements+=(4+(int)i)*6;//x,y,z,r,g,b per polygon vertex
 	}
+	//Big red one
+	r=1.0f;g=0.0f;b=0.0f;
+	tmp->next = new NGon(ngonSides,r,g,b,1.0f,radius*6,0.0f,0.0f,0.04f);
+	elements+=ngonSides*6;
 	printf("Total IBOs: %i, total size: %lu\n",elements,(sizeof(GLfloat)*elements));
 }
 
@@ -125,8 +145,7 @@ int main(int argc, char* argv[]){
 	glutInit(&argc, argv);
 	glutInitDisplayMode(GLUT_RGBA|GLUT_ALPHA|GLUT_DOUBLE|GLUT_DEPTH);
 	glutInitWindowSize(screen_width, screen_height);
-	glutCreateWindow("NGon");
-	
+	glutCreateWindow("Flower of life");
 	GLenum glew_status = glewInit();
 	glutKeyboardFunc (Keyboard);
 	if (glew_status != GLEW_OK){

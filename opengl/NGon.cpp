@@ -7,15 +7,22 @@
 #include "NGon.h"
 #define PI 3.1415926535897932384626433832795
 //GLint attribute_coord3d,attribute_v_color,uniform_mvp;
-
-NGon::NGon(int nsides,GLfloat ndepth,GLfloat nr, GLfloat ng, GLfloat nb,GLfloat nalpha)
-:vbo_vertices(0),ibo_elements(0),vbo_triangle_colors(0),rotate(0),radius(0.8){
+//TODO: support alpha
+NGon::NGon(int nsides,GLfloat nz,GLfloat nr, GLfloat ng, GLfloat nb,GLfloat nalpha)
+:vbo_vertices(0),ibo_elements(0),vbo_triangle_colors(0),rotate(0),radius(0.8),x(0.0f),y(0.0f){
 	sides=nsides;
-	depth=ndepth;
-	r=nr;
-	g=ng;
-	b=nb;
+	z=nz;
+	r=nr;g=ng;b=nb;
 	alpha=nalpha;
+	next=NULL;
+}
+NGon::NGon(int nsides,GLfloat nr, GLfloat ng, GLfloat nb,GLfloat nalpha,GLfloat nradius,GLfloat nx, GLfloat ny,GLfloat nz)
+:vbo_vertices(0),ibo_elements(0),vbo_triangle_colors(0),rotate(0){
+	sides=nsides;
+	r=nr;g=ng;b=nb;
+	alpha=nalpha;
+	x=nx;y=ny;z=nz;
+	radius=nradius;
 	next=NULL;
 }
 NGon::~NGon(){
@@ -30,9 +37,9 @@ GLfloat* NGon::generateNGon(){
 	float angle = rotate;
 	float steps = 360.0f/this->sides;
 	for (int i = 0; i<this->sides;i++){
-		polygonPoints[++curpos]=(cos(angle*PI/180)*this->radius);
-		polygonPoints[++curpos]=(sin(angle*PI/180)*this->radius);
-		polygonPoints[++curpos]=this->depth;
+		polygonPoints[++curpos]=x+(cos(angle*PI/180)*this->radius);
+		polygonPoints[++curpos]=y+(sin(angle*PI/180)*this->radius);
+		polygonPoints[++curpos]=this->z;
 		polygonPoints[++curpos]=this->r;
 		polygonPoints[++curpos]=this->g;
 		polygonPoints[++curpos]=this->b;

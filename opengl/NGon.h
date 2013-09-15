@@ -5,12 +5,13 @@ class NGon{
 private:
 	GLuint vbo_vertices,ibo_elements,vbo_triangle_colors;
 	int sides;
-	GLfloat depth,r,g,b,alpha;
+	GLfloat z,r,g,b,alpha,x,y;
 public:
 	NGon *next;
 	float rotate;
 	float radius;
-	NGon(int nsides,GLfloat ndepth,GLfloat nr, GLfloat ng, GLfloat nb,GLfloat nalpha);
+	NGon(int nsides,GLfloat nz,GLfloat nr, GLfloat ng, GLfloat nb,GLfloat nalpha);
+	NGon(int nsides,GLfloat nr, GLfloat ng, GLfloat nb,GLfloat nalpha,GLfloat nradius,GLfloat nx, GLfloat ny,GLfloat nz);
 	~NGon();
 	GLfloat* generateNGon();
 	void init_resources();
