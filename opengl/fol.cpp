@@ -24,6 +24,11 @@ int screen_width=640, screen_height=480;
 NGon *parent;
 bool pause = false;
 float close = 0.0f;
+int ngonSides=3;
+bool changing=false;
+float duration = 4.0f;
+//Just declaring the function
+void refresh();
 
 void onDisplay(){
 	glClearColor(0.0, 0.0, 0.0, 1.0);
@@ -39,7 +44,17 @@ void onDisplay(){
 }
 void onIdle() {
 	if(pause == false){
-		close = glutGet(GLUT_ELAPSED_TIME)%4000 / 1000.0;
+		close = glutGet(GLUT_ELAPSED_TIME)%(int)(duration*1000.0f) / 1000.0;
+		if(close > duration-duration/8 && !changing){
+			changing = true;
+		}
+		if(close < duration/8 && changing){
+			changing=false;
+			if(ngonSides<40){
+				ngonSides++;
+				refresh();
+			}
+		}
 	}
 	glm::mat4 model = glm::translate(glm::mat4(1.0f), glm::vec3(0.0, 0.0, close));
 	glm::mat4 view = glm::lookAt(glm::vec3(0.0, 0.0, 0.0), glm::vec3(0.0, 0.0, 1.0), glm::vec3(0.0, 1.0, 0.0));
@@ -50,20 +65,9 @@ void onIdle() {
 	glutPostRedisplay();
 }
 void free_resources(){
-	glDeleteProgram(program);
 	if (parent)
 		parent->deleteAll();
-}
-void Keyboard(unsigned char key, int x, int y){
-	switch (key){
-		case 27:
-			free_resources();
-			exit (0);
-			break;
-		case 112:
-			pause = !pause;
-			break;
-	}
+	glDeleteProgram(program);
 }
 int init_resources(){
 	if(parent)
@@ -112,9 +116,8 @@ void initNGons(){
 	GLfloat radius = 0.1f;
 	GLfloat x = 0.0f;
 	GLfloat y = 0.0f;
-	printf("Initializing NGon IBOs\n");
-	int ngonSides=5;
-	GLfloat sides=5.0f;
+	printf("Initializing NGon IBOs for %i sides -> ",ngonSides);
+	GLfloat sides=(GLfloat)ngonSides;
 	parent = new NGon(ngonSides,r,g,b,1.0f,0.1f,x,y,z);
 	NGon *tmp = parent;
 	GLfloat anglestep=(360.0f/sides);
@@ -129,7 +132,7 @@ void initNGons(){
 			for(GLfloat d=sides - 1.0f;d>=0.0f;d-=1.0f){
 				x=jx + cos((i*anglestep+anglestep)*PI/180)*d*radius;
 				y=jy + sin((i*anglestep+anglestep)*PI/180)*d*radius;
-				if(fabs(x) < 0.8f && fabs(y) < 0.8f){
+				if(sqrt(x*x+y*y) < radius*ngonSides){
 					tmp->next = new NGon(ngonSides,r,g,b,1.0f,radius,x,y,z);
 					if(tmp->next == NULL){
 						break;
@@ -147,14 +150,51 @@ void initNGons(){
 	elements+=ngonSides*6;
 	printf("Total IBOs: %i, total size: %lu\n",elements,(sizeof(GLfloat)*elements));
 }
-
+void standardKeyboard(unsigned char key, int x, int y){
+	switch (key){
+		case 27:
+			free_resources();
+			exit (0);
+			break;
+		case 112://P for pause
+			pause = !pause;
+			break;
+		default:
+			printf("(char)key: %i\n",(char)key);
+			break;
+	}
+}
+void refresh(){
+	glutIdleFunc(NULL);
+	free_resources();
+	initNGons();
+	if (init_resources()) {
+		glutDisplayFunc(onDisplay);
+		glutIdleFunc(onIdle);
+		glEnable(GL_DEPTH_TEST);
+		glEnable(GL_BLEND);
+		glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+		glutMainLoop();
+	}
+}
+void specialKeyboard(int key, int x, int y){
+	switch (key){
+		case GLUT_KEY_UP://up arrow
+			ngonSides++;
+			break;
+		case GLUT_KEY_DOWN://up arrow
+			ngonSides--;
+			break;
+	}
+}
 int main(int argc, char* argv[]){
 	glutInit(&argc, argv);
 	glutInitDisplayMode(GLUT_RGBA|GLUT_ALPHA|GLUT_DOUBLE|GLUT_DEPTH);
 	glutInitWindowSize(screen_width, screen_height);
 	glutCreateWindow("Flower of life");
 	GLenum glew_status = glewInit();
-	glutKeyboardFunc (Keyboard);
+	glutKeyboardFunc(standardKeyboard);
+	glutSpecialFunc(specialKeyboard);
 	if (glew_status != GLEW_OK){
 		fprintf(stderr, "Error: %s\n", glewGetErrorString(glew_status));
 		return EXIT_FAILURE;
@@ -169,6 +209,7 @@ int main(int argc, char* argv[]){
 		glutDisplayFunc(onDisplay);
 		glutIdleFunc(onIdle);
 		glEnable(GL_DEPTH_TEST);
+		glEnable(GL_BLEND);
 		glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 		glutMainLoop();
 	}
