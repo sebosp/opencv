@@ -21,8 +21,9 @@
 GLuint program;
 GLint attribute_coord3d,attribute_v_color,uniform_mvp;
 int screen_width=640, screen_height=480;
-int maxNGons=80.0f;//XXX
 NGon *parent;
+bool pause = false;
+float close = 0.0f;
 
 void onDisplay(){
 	glClearColor(0.0, 0.0, 0.0, 1.0);
@@ -37,11 +38,12 @@ void onDisplay(){
 	glutSwapBuffers();
 }
 void onIdle() {
-	float close = ((glutGet(GLUT_ELAPSED_TIME)%((int)maxNGons * 1000)) / 1000.0);
-	close = 78.0f;
-	glm::mat4 model = glm::translate(glm::mat4(1.0f), glm::vec3(0.0, 0.0, -maxNGons+close));
-	glm::mat4 view = glm::lookAt(glm::vec3(0.0, 0.0, 0.0), glm::vec3(0.0, 0.0, -maxNGons+close), glm::vec3(0.0, 1.0, 0.0));
-	glm::mat4 projection = glm::perspective(45.0f, 1.0f*screen_width/screen_height, 0.1f, (float)(maxNGons)/2);
+	if(pause == false){
+		close = glutGet(GLUT_ELAPSED_TIME)%4000 / 1000.0;
+	}
+	glm::mat4 model = glm::translate(glm::mat4(1.0f), glm::vec3(0.0, 0.0, close));
+	glm::mat4 view = glm::lookAt(glm::vec3(0.0, 0.0, 0.0), glm::vec3(0.0, 0.0, 1.0), glm::vec3(0.0, 1.0, 0.0));
+	glm::mat4 projection = glm::perspective(45.0f, 1.0f*screen_width/screen_height, 0.1f, 0.0f);
 	glm::mat4 mvp = projection * view * model;
 	glUseProgram(program);
 	glUniformMatrix4fv(uniform_mvp, 1, GL_FALSE, glm::value_ptr(mvp));
@@ -57,7 +59,10 @@ void Keyboard(unsigned char key, int x, int y){
 		case 27:
 			free_resources();
 			exit (0);
-		break;
+			break;
+		case 112:
+			pause = !pause;
+			break;
 	}
 }
 int init_resources(){
@@ -103,14 +108,16 @@ void initNGons(){
 	r = 0.0f;
 	g = 1.0f;
 	b = 0.0f;
+	GLfloat z=0.0f;
 	GLfloat radius = 0.1f;
 	GLfloat x = 0.0f;
 	GLfloat y = 0.0f;
 	printf("Initializing NGon IBOs\n");
-	int ngonSides=40;
-	parent = new NGon(ngonSides,r,g,b,1.0f,0.1f,x,y,0.04f);
+	int ngonSides=5;
+	GLfloat sides=5.0f;
+	parent = new NGon(ngonSides,r,g,b,1.0f,0.1f,x,y,z);
 	NGon *tmp = parent;
-	GLfloat sides=6.0f;GLfloat anglestep=(360.0f/sides);
+	GLfloat anglestep=(360.0f/sides);
 	int elements=ngonSides*(int)sides;//x,y,z,r,g,b
 	for(GLfloat i=0.0f;i<sides;i+=1.0f){
 		cx=0.0f;
@@ -123,7 +130,7 @@ void initNGons(){
 				x=jx + cos((i*anglestep+anglestep)*PI/180)*d*radius;
 				y=jy + sin((i*anglestep+anglestep)*PI/180)*d*radius;
 				if(fabs(x) < 0.8f && fabs(y) < 0.8f){
-					tmp->next = new NGon(ngonSides,r,g,b,1.0f,radius,x,y,0.04f);
+					tmp->next = new NGon(ngonSides,r,g,b,1.0f,radius,x,y,z);
 					if(tmp->next == NULL){
 						break;
 					}
@@ -136,7 +143,7 @@ void initNGons(){
 	}
 	//Big red one
 	r=1.0f;g=0.0f;b=0.0f;
-	tmp->next = new NGon(ngonSides,r,g,b,1.0f,radius*6,0.0f,0.0f,0.04f);
+	tmp->next = new NGon(ngonSides,r,g,b,1.0f,radius*ngonSides,0.0f,0.0f,z);
 	elements+=ngonSides*6;
 	printf("Total IBOs: %i, total size: %lu\n",elements,(sizeof(GLfloat)*elements));
 }

@@ -32,7 +32,7 @@ NGon::~NGon(){
 		glDeleteBuffers(1, &ibo_elements);
 }
 GLfloat* NGon::generateNGon(){
-	GLfloat* polygonPoints = new GLfloat[6*this->sides];
+	GLfloat* polygonPoints = new GLfloat[7*this->sides];
 	int curpos = -1;
 	float angle = rotate;
 	float steps = 360.0f/this->sides;
@@ -43,6 +43,7 @@ GLfloat* NGon::generateNGon(){
 		polygonPoints[++curpos]=this->r;
 		polygonPoints[++curpos]=this->g;
 		polygonPoints[++curpos]=this->b;
+		polygonPoints[++curpos]=this->alpha;
 		angle+=steps;
 	}
 	curpos-=3;
@@ -57,7 +58,7 @@ void NGon::init_resources(){
 	GLfloat *vertices = generateNGon();
 	glGenBuffers(1, &this->vbo_vertices);
 	glBindBuffer(GL_ARRAY_BUFFER, this->vbo_vertices);
-	glBufferData(GL_ARRAY_BUFFER, sizeof(GLfloat)*this->sides*6, vertices, GL_STATIC_DRAW);
+	glBufferData(GL_ARRAY_BUFFER, sizeof(GLfloat)*this->sides*7, vertices, GL_STATIC_DRAW);
 	glBindBuffer(GL_ARRAY_BUFFER, 0);
 	
 	GLushort elements[this->sides];
@@ -76,15 +77,15 @@ void NGon::onDisplay(GLint attribute_coord3d,GLint attribute_v_color){
 		3,                 // number of elements per vertex, here (x,y,z)
 		GL_FLOAT,          // the type of each element
 		GL_FALSE,          // take our values as-is
-		sizeof(GLfloat)*6, // 6 items, x,y,z,r,g,b
+		sizeof(GLfloat)*7, // 7 items, x,y,z,r,g,b,a
 		0  		   // Offset
 	);
 	glVertexAttribPointer(
 		attribute_v_color,      // attribute
-		3,                      // number of elements per vertex, here (r,g,b)
+		4,                      // number of elements per vertex, here (r,g,b,a)
 		GL_FLOAT,               // the type of each element
 		GL_FALSE,               // take our values as-is
-		sizeof(GLfloat) * 6,    // next color appears every 6 floats
+		sizeof(GLfloat) * 7,    // next color appears every 7 floats
 		(GLvoid*) (3 * sizeof(GLfloat))  // offset of first element
 	);
 	glBindBuffer(GL_ARRAY_BUFFER, 0);
