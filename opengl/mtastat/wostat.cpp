@@ -9,14 +9,15 @@
 #define PI 3.1415926535897932384626433832795
 //GLint attribute_coord3d,attribute_v_color,uniform_mvp;
 wostat::wostat(std::string nwostart,std::string npid,std::string nwoseq,long nprocessstart)
-:x(0.0f),y(0.0f),z(0),sent(0),soft(0),hard(0){
+:x(0.0f),y(0.0f),z(0),size(0),soft(0),hard(0),sent(0){
 	wostart=nwostart;
 	pid=npid;
 	woseq=nwoseq;
 	next=NULL;
 	prev=NULL;
 	processstart=nprocessstart;
-	processend=0;
+	processend=-1;
+	bool complete=false;
 }
 wostat::~wostat(){
 	if(this->prev != NULL){
@@ -43,17 +44,73 @@ bool wostat::exists(std::string nwostart,std::string npid,std::string nwoseq){
 		return false;
 	}
 }
-bool wostat::add(wostat *tmp){
-	if(this->processstart < tmp->processstart){
+void wostat::add(wostat *tmp){
+	if(this->processstart > tmp->processstart){
 		//This should never happen, we shouldn't be sending before epoch 0 amirite?
-		return false;
+		#ifdef _DEBUG
+		printf("Discarding strange entry with processstart = %l\n",tmp->processstart);
+		#endif
+		return;
 	}
 	if(this->next){
 		if(this->next->processstart > tmp->processstart){
-			//insert here
+			tmp->next=this->next;
+			tmp->prev=this;
+			this->next->prev=tmp;
+			this->next=tmp;
+		}else if(this->next->processstart == tmp->processstart){
+			std::string wofullnxt=this->next->wostart + this->next->pid + this->next->woseq;
+			std::string wofullcur=this->wostart + this->pid + this->woseq;
+			//Hum not equal than because we shouldn't reprocess the same woretry...
+			if(wofullnxt > wofullcur){
+				tmp->next=this->next;
+				tmp->prev=this;
+				this->next->prev=tmp;
+				this->next=tmp;
+			}else{
+				this->next->add(tmp);
+			}
 		}else{
-			return this->next->add(tmp);
+			this->next->add(tmp);
 		}
+	}else{
+		tmp->prev=this;
+		this->next=tmp;
+	}
+}
+bool wostat::update(std::string nwostart,std::string npid,std::string nwoseq, std::string naid, int nsize, int nsoft, int nhard, long nprocessend, int nsent){
+	if(this->wostart == nwostart && this->pid == npid && this->woseq == nwoseq){
+		if(this->processstart > nprocessend){//Lil' sanity check
+			return false;
+		}
+		aid=naid;
+		size=nsize;
+		soft=nsoft;
+		hard=nhard;
+		processend=nprocessend;
+		sent=nsent;
+		return true;
+	}else{
+		if(this->next != NULL){
+			return(this->next->update(nwostart,npid,nwoseq,naid,nsent,nsoft,nhard,nprocessend,nsize));
+		}
+		return false;
+	}
+}
+void wostat::normalize(long min,long max){
+	//Some values might be unknown or not accounted for, they are set to -1
+	if(this->processstart == -1){
+		this->processstart = 0;
+	}else{
+		this->processstart-=min;
+	}
+	if(this->processend == -1){
+		this->processend = max;
+	}else{
+		this->processend-=min;
+	}
+	if(this->next != NULL){
+		this->next->normalize(min,max);
 	}
 }
 /*GLfloat* wostat::generatewostat(){

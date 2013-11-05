@@ -4,6 +4,7 @@
 #include <stdlib.h>
 #include <string> 
 #include <iostream>
+#include <climits>
 #include <boost/regex.hpp>
 #define _DEBUG
 using namespace std;
@@ -34,18 +35,27 @@ const GLuint NumVertices = 6;
 void Keyboard(unsigned char key, int x, int y){
 	switch (key){
 		case 27:
+			root->deleteAll();
 			exit (0);
 		break;
 	}
 }
-GLfloat* generatePath(){
-	GLfloat* Points = new GLfloat[7];
+GLfloat* generatePath(int totalunits){
+	GLfloat* Points = new GLfloat[totalunits*2*2];//Two points (start/end) and two dimensions (for now)
+	wostat *tmp = root->next;
+	int curpos = -1;
+	long maxproc = root->processend;
+	while(tmp){
+		Points[++curpos]=1.0f-(2*tmp->processstart/maxproc)
+		Points[++curpos]=0.0f;
+		tmp=tmp->next;
+	}
 	return Points;
 }
 long date_to_epoch(string datechars){
 	struct tm tm;
 	time_t t;
-	if(strptime(processstart.c_str(),"%Y-%m-%d %H:%M:%S",&tm) == NULL){
+	if(strptime(datechars.c_str(),"%Y-%m-%d %H:%M:%S",&tm) == NULL){
 		return -1;
 	}
 	t = mktime(&tm);
@@ -55,57 +65,125 @@ long date_to_epoch(string datechars){
 	return (long) t;
 
 }
-void gatherMTAData(void){
+int gatherMTAData(void){
 	string line;
-	unsigned int i=0;
+	//unsigned int i=0;
 	ifstream infile("/home/sebas/mtadata.log");
 	boost::regex_constants::syntax_option_type flags = boost::regex::extended;
-	string pid,wostart,woseq,aid,processstart,processend,sent,soft,hard;
-	pid=wostart=woseq=aid=0;
+	string pid,wostart,woseq,aid;
+	int size,soft,hard,sent;
+	pid=wostart=woseq=aid="0";
 	long processstart,processend;
 	processstart=processend=0;
 	root=new wostat(wostart,pid,woseq,processstart);
 	wostat *tmp;
 	regex wsre("^([-0-9: ]{19})\\.\\d* \\d* pbs: \\(Q*(\\d*)_*(\\d*)_(\\d*)_([-\\d]*)\\) Starting on.*$",flags);
-	regex were("^([-0-9: ]{19})\\.\\d* \\d* pbs: \\(Q*(\\d*)_*(\\d*)_(\\d*)_([-\\d]*)\\) done with.*; \\((\\d+)\\) (\\d+) total, (\\d+) S, (\\d+) T.*$",flags);
+	regex were("^([-0-9: ]{19})\\.\\d* \\d* pbs: \\(Q*(\\d*)_*(\\d*)_(\\d*)_([-\\d]*)\\) done with.*; \\((\\d+)\\) (\\d+) total, (\\d+) S, (\\d+) T \\(R.(\\d*),.*$",flags);
 	if (infile.is_open()){
 		while (getline(infile, line)){
 			smatch sm;
 			if(regex_match(line,sm,wsre)){
-				#ifdef _DEBUG
+				/*#ifdef _DEBUG
 				cout << "[II]: start = ";
 				for(i=0;i<sm.size();i++){
 					cout << "[II] match " << i << " : " << sm[i] << endl;
 				}
-				#endif
-				if(sm[3]==""){//This is a brand new WO, not a retry WO
-					processstart=date_to_epoch(sm[1]);
-					if(processstart == -1){
-						break;
-					}
+				#endif*/
+				processstart=date_to_epoch(sm[1]);
+				if(processstart  < 0){
+					cout << "[EE] Could not translate " << sm[1] << " to epoch... bailing..." << endl;
+					break;
+				}
+				if(sm[3]==""){//This is a initial WO, not a retry WO
 					wostart=sm[2];
-					pid=sm[4];
-					woseq=sm[5];
-					tmp=new wostat(wostart,pid,woseq,processstart);
+				}else{
+					//sm[2] seems to be the retry time at which it should start...
+					wostart=sm[3];
+				}
+				pid=sm[4];
+				woseq=sm[5];
+				tmp=new wostat(wostart,pid,woseq,processstart);
+				root->add(tmp);
+			}else if(regex_match(line,sm,were)){
+				processend=date_to_epoch(sm[1]);
+				if(processend  < 0){
+					cout << "[EE] Could not translate " << sm[1] << " to epoch... bailing..." << endl;
+					break;
+				}
+				if(sm[3]==""){//This is an initial WO, not a retry WO
+					wostart=sm[2];
+				}else{
+					wostart=sm[3];
+				}
+				pid=sm[4];
+				woseq=sm[5];
+				aid=sm[6];
+				size=stoi(sm[7]);
+				hard=stoi(sm[8]);
+				soft=stoi(sm[9]);
+				sent=stoi(sm[10]);
+				if(!root->exists(wostart,pid,woseq)){
+					//We might have partial information on the WO process...
+					//Let's set the processstart to -1, 
+					//special value we will adjust later to the minimum valid epoch found.
+					tmp=new wostat(wostart,pid,woseq,-1);
 					root->add(tmp);
 				}
-			}else if(regex_match(line,sm,were)){
-				#ifdef _DEBUG
-				cout << "[II]: end = ";
-				for(i=0;i<sm.size();i++){
-					cout << "[II] match " << i << " : " << sm[i] << endl;
+				if(!root->update(wostart,pid,woseq,aid,size,soft,hard,processend,sent)){
+					cout << "[EE] Could not update, bad data in wo stats?"<< endl;
 				}
-				#endif
 			}else{
 				cout << "[EE]: Pattern not found for line -> " << line << endl;
 			}
 		}
 		infile.close();
 	}else{
-		fprintf(stderr, "Error: Unable to open file\n");
+		fprintf(stderr, "EE: Unable to open file\n");
+		return 0;
 	}
+	if(!root->next){
+		fprintf(stderr, "EE: No entries processable found...\n");
+		return 0;
+	}
+	tmp=root->next;
+	int count = 0;
+	long minproc=LONG_MAX;
+	long maxproc=-1;
+	while(tmp != NULL){
+		if(minproc > tmp->processstart && tmp->processstart > 0){
+			minproc = tmp->processstart;
+		}
+		if(maxproc < tmp->processend && tmp->processend > 0){
+			maxproc = tmp->processend;
+		}
+		count++;
+		tmp=tmp->next;
+	}
+	cout << "Minimizing epochs: (" << minproc << "," << maxproc << ") to: (0," << (maxproc-minproc) << ")" << endl;
+	root->next->normalize(minproc,(maxproc-minproc));
+	root->processend=(maxproc-minproc);
+	tmp = root->next;
+	#ifdef _DEBUG
+	count=0;
+	while(tmp != NULL){
+		cout << "[II]: Final list status i :";
+		cout << count << " = wostart " << tmp->wostart;
+		cout << " pid " << tmp->pid;
+		cout << " woseq " << tmp->woseq;
+		cout << " processstart " << tmp->processstart;
+		cout << " processend " << tmp->processend;
+		cout << " aid " << tmp->aid;
+		cout << " size " << tmp->size;
+		cout << " soft " << tmp->soft;
+		cout << " hard " << tmp->hard;
+		cout << endl;
+		count++;
+		tmp=tmp->next;
+	}
+	#endif
+	return count;
 }
-void init(void){
+void init(int numUnits){
 	GLint link_ok = GL_FALSE;
 	GLuint vs, fs;
 	if ((vs = create_shader("mtastat.v.glsl", GL_VERTEX_SHADER))   == 0) return;
@@ -121,7 +199,7 @@ void init(void){
 	}
 	glGenVertexArrays(NumVAOs, VAOs);
 	glBindVertexArray(VAOs[Triangles]);
-	GLfloat *vertices = generatePath();
+	GLfloat *vertices = generatePath(numUnits);
 	glGenBuffers(NumBuffers,Buffers);
 	glBindBuffer(GL_ARRAY_BUFFER,Buffers[ArrayBuffer]);
 	glBufferData(GL_ARRAY_BUFFER,sizeof(vertices),vertices,GL_STATIC_DRAW);
@@ -138,9 +216,11 @@ void display(void){
 
 int main(int argc, char* argv[]){
 	//move to after init
-	gatherMTAData();
-	root->deleteAll();
-	return EXIT_SUCCESS;;
+	int numUnits=gatherMTAData();
+	if (numUnits){
+		cout << "MTA Data not found:" << endl;
+		return EXIT_SUCCESS;
+	}
 	glutInit(&argc,argv);
 	glutInitDisplayMode(GLUT_RGBA);
 	glutInitWindowSize(512,512);
@@ -154,7 +234,7 @@ int main(int argc, char* argv[]){
 		return EXIT_FAILURE;
 	}
 	//printf("Got opengl version: %s\n", glGetString(GL_VERSION));
-	init();
+	init(numUnits);
 	glutKeyboardFunc (Keyboard);
 	glutDisplayFunc(display);
 	glutMainLoop();
