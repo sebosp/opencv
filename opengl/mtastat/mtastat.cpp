@@ -143,28 +143,32 @@ int gatherMTAData(void){
 		count++;
 		tmp=tmp->next;
 	}
-	maxproc=maxproc-minproc;
 	cout << "Minimizing epochs: (" << minproc << "," << maxproc << ") to: (0," << (maxproc-minproc) << ")" << endl;
+	maxproc=maxproc-minproc;
 	root->next->normalize(minproc,maxproc);
 	root->processend=maxproc;
 	tmp = root->next;
 	#ifdef _DEBUG
 	count=0;
+	string refid;
 	while(tmp != NULL){
-		cout << "[II] i :"  << count;
+		cout << "[II] i : "  << count;
 /*		cout << " = wostart " << tmp->wostart;
 		cout << " pid " << tmp->pid;
 		cout << " woseq " << tmp->woseq;
 		cout << " aid " << tmp->aid;
 		cout << " size " << tmp->size;
 		cout << " soft " << tmp->soft;
-		cout << " hard " << tmp->hard;
+		cout << " hard " << tmp->hard;*/
 		cout << " processstart " << tmp->processstart;
-		cout << " processend " << tmp->processend;*/
-		tmp->setPos(1,(1.8*tmp->processend/maxproc)-1.0f,0.0f,0.0f);
-		tmp->setPos(2,(1.8*tmp->processend/maxproc)-1.0f,0.1f,0.0f);
-		tmp->setPos(3,(1.8*tmp->processstart/maxproc)-1.0f,0.1f,0.0f);
-		tmp->setPos(4,(1.8*tmp->processstart/maxproc)-1.0f,0.0f,0.0f);
+		cout << " processend " << tmp->processend;
+		//preset to CCW...
+		tmp->x1=(1.9*tmp->processend/maxproc)-1.0f;
+		tmp->x2=tmp->x1;
+		tmp->x3=(1.9*tmp->processstart/maxproc)-1.0f;
+		tmp->x4=tmp->x3;
+		refid=tmp->pid+tmp->wostart+tmp->woseq;
+		tmp->raiseOverlaps(tmp->processstart,tmp->processend,tmp->y1,refid);
 		cout << " x1 " << tmp->x1 << " y1 " << tmp->y1 << endl;
 		cout << " x2 " << tmp->x2 << " y2 " << tmp->y2 << endl;
 		cout << " x3 " << tmp->x3 << " y3 " << tmp->y3 << endl;

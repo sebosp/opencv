@@ -10,6 +10,7 @@ public:
 	GLfloat x2,y2,z2;
 	GLfloat x3,y3,z3;
 	GLfloat x4,y4,z4;
+	GLfloat ystep;
 	std::string pid,wostart,woseq,aid;
 	long processstart,processend;
 	int size,soft,hard,sent;
@@ -26,7 +27,7 @@ public:
 	wostat *prev;
 	wostat(std::string nwostart,std::string npid,std::string nwoseq,long nprocessstart);
 	~wostat();
-	void splitIfContained(std::string nprocessdate);
+	void raiseOverlaps(long min, long max,GLfloat height,std::string refid);
 	bool exists(std::string nwostart,std::string npid,std::string nwoseq);
 	void setPos(int vertex, GLfloat nx,GLfloat ny,GLfloat nz);
 	void setColor(GLfloat nr,GLfloat ng,GLfloat nb,GLfloat nalpha);
