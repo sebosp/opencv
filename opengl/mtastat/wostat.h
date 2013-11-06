@@ -4,12 +4,23 @@
 class wostat{
 private:
 	GLuint vbo_vertices,ibo_elements,vbo_triangle_colors;
-	GLfloat r,g,b,alpha,x,y,z;
 public:
+	GLfloat r,g,b,alpha;
+	GLfloat x1,y1,z1;
+	GLfloat x2,y2,z2;
+	GLfloat x3,y3,z3;
+	GLfloat x4,y4,z4;
 	std::string pid,wostart,woseq,aid;
 	long processstart,processend;
 	int size,soft,hard,sent;
 	bool complete;
+	enum VAO_IDs{Triangles, NumVAOs};
+	enum Buffer_IDs{ArrayBuffer, NumBuffers};
+	enum Attrib_IDs{vPosition=0};
+	GLuint VAOs[NumVAOs];
+	GLuint Buffers[NumBuffers];
+	const GLuint NumVertices;
+	const GLuint NumVertexAttribs;
 
 	wostat *next;
 	wostat *prev;
@@ -17,15 +28,15 @@ public:
 	~wostat();
 	void splitIfContained(std::string nprocessdate);
 	bool exists(std::string nwostart,std::string npid,std::string nwoseq);
-	void setPos(GLfloat nx,GLfloat ny,GLfloat nz);
+	void setPos(int vertex, GLfloat nx,GLfloat ny,GLfloat nz);
 	void setColor(GLfloat nr,GLfloat ng,GLfloat nb,GLfloat nalpha);
 	void add(wostat *tmp);
 	bool update(std::string nwostart,std::string npid,std::string nwoseq, std::string naid, int nsize, int nsoft, int nhard, long nprocessend,int sent);
 	void normalize(long min,long max);
-	//void init_resources();
-	//void onDisplay(GLint attribute_coord3d,GLint attribute_v_color);
-	//void displayAll(GLint attribute_coord3d,GLint attribute_v_color);
+	void init_resources();
+	void onDisplay();
+	void displayAll();
 	void deleteAll();
-	//void initAll();
+	void initAll();
 };
 #endif

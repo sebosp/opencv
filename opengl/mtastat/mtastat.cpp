@@ -21,12 +21,8 @@ using namespace boost;
 #include <glm/gtc/type_ptr.hpp>
 #include "wostat.h"
 
-enum VAO_IDs{Triangles, NumVAOs};
-enum Buffer_IDs{ArrayBuffer, NumBuffers};
 enum Attrib_IDs{vPosition=0};
 
-GLuint VAOs[NumVAOs];
-GLuint Buffers[NumBuffers];
 GLuint program;
 wostat *root;
 
@@ -39,18 +35,6 @@ void Keyboard(unsigned char key, int x, int y){
 			exit (0);
 		break;
 	}
-}
-GLfloat* generatePath(int totalunits){
-	GLfloat* Points = new GLfloat[totalunits*2*2];//Two points (start/end) and two dimensions (for now)
-	wostat *tmp = root->next;
-	int curpos = -1;
-	long maxproc = root->processend;
-	while(tmp){
-		Points[++curpos]=1.0f-(2*tmp->processstart/maxproc)
-		Points[++curpos]=0.0f;
-		tmp=tmp->next;
-	}
-	return Points;
 }
 long date_to_epoch(string datechars){
 	struct tm tm;
@@ -159,24 +143,33 @@ int gatherMTAData(void){
 		count++;
 		tmp=tmp->next;
 	}
+	maxproc=maxproc-minproc;
 	cout << "Minimizing epochs: (" << minproc << "," << maxproc << ") to: (0," << (maxproc-minproc) << ")" << endl;
-	root->next->normalize(minproc,(maxproc-minproc));
-	root->processend=(maxproc-minproc);
+	root->next->normalize(minproc,maxproc);
+	root->processend=maxproc;
 	tmp = root->next;
 	#ifdef _DEBUG
 	count=0;
 	while(tmp != NULL){
-		cout << "[II]: Final list status i :";
-		cout << count << " = wostart " << tmp->wostart;
+		cout << "[II] i :"  << count;
+/*		cout << " = wostart " << tmp->wostart;
 		cout << " pid " << tmp->pid;
 		cout << " woseq " << tmp->woseq;
-		cout << " processstart " << tmp->processstart;
-		cout << " processend " << tmp->processend;
 		cout << " aid " << tmp->aid;
 		cout << " size " << tmp->size;
 		cout << " soft " << tmp->soft;
 		cout << " hard " << tmp->hard;
-		cout << endl;
+		cout << " processstart " << tmp->processstart;
+		cout << " processend " << tmp->processend;*/
+		tmp->setPos(1,(1.8*tmp->processend/maxproc)-1.0f,0.0f,0.0f);
+		tmp->setPos(2,(1.8*tmp->processend/maxproc)-1.0f,0.1f,0.0f);
+		tmp->setPos(3,(1.8*tmp->processstart/maxproc)-1.0f,0.1f,0.0f);
+		tmp->setPos(4,(1.8*tmp->processstart/maxproc)-1.0f,0.0f,0.0f);
+		cout << " x1 " << tmp->x1 << " y1 " << tmp->y1 << endl;
+		cout << " x2 " << tmp->x2 << " y2 " << tmp->y2 << endl;
+		cout << " x3 " << tmp->x3 << " y3 " << tmp->y3 << endl;
+		cout << " x4 " << tmp->x4 << " y4 " << tmp->y4 << endl;
+		//cout << endl;
 		count++;
 		tmp=tmp->next;
 	}
@@ -197,33 +190,28 @@ void init(int numUnits){
 		print_log(program);
 		return;
 	}
-	glGenVertexArrays(NumVAOs, VAOs);
-	glBindVertexArray(VAOs[Triangles]);
-	GLfloat *vertices = generatePath(numUnits);
-	glGenBuffers(NumBuffers,Buffers);
-	glBindBuffer(GL_ARRAY_BUFFER,Buffers[ArrayBuffer]);
-	glBufferData(GL_ARRAY_BUFFER,sizeof(vertices),vertices,GL_STATIC_DRAW);
+	root->initAll();
 	glUseProgram(program);
-	glVertexAttribPointer(vPosition,2,GL_FLOAT,GL_FALSE,0,BUFFER_OFFSET(0));
-	glEnableVertexAttribArray(vPosition);
+	/*glVertexAttribPointer(vPosition,2,GL_FLOAT,GL_FALSE,0,0);
+	glEnableVertexAttribArray(vPosition);*/
 }
 void display(void){
 	glClear(GL_COLOR_BUFFER_BIT);
-	glBindVertexArray(VAOs[Triangles]);
-	glDrawArrays(GL_LINE_LOOP,0,NumVertices);
+	root->displayAll();
+	//root->next->onDisplay();
 	glFlush();
 }
 
 int main(int argc, char* argv[]){
 	//move to after init
 	int numUnits=gatherMTAData();
-	if (numUnits){
+	if (numUnits < 1){
 		cout << "MTA Data not found:" << endl;
-		return EXIT_SUCCESS;
+		return EXIT_FAILURE;
 	}
 	glutInit(&argc,argv);
 	glutInitDisplayMode(GLUT_RGBA);
-	glutInitWindowSize(512,512);
+	glutInitWindowSize(1024,768);
 	glutInitContextVersion(4,3);
 	glutInitContextProfile(GLUT_CORE_PROFILE);
 	glutCreateWindow(argv[0]);

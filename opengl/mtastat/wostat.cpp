@@ -9,7 +9,7 @@
 #define PI 3.1415926535897932384626433832795
 //GLint attribute_coord3d,attribute_v_color,uniform_mvp;
 wostat::wostat(std::string nwostart,std::string npid,std::string nwoseq,long nprocessstart)
-:x(0.0f),y(0.0f),z(0),size(0),soft(0),hard(0),sent(0){
+:size(0),soft(0),hard(0),sent(0),NumVertices(4),NumVertexAttribs(7){
 	wostart=nwostart;
 	pid=npid;
 	woseq=nwoseq;
@@ -17,7 +17,6 @@ wostat::wostat(std::string nwostart,std::string npid,std::string nwoseq,long npr
 	prev=NULL;
 	processstart=nprocessstart;
 	processend=-1;
-	bool complete=false;
 }
 wostat::~wostat(){
 	if(this->prev != NULL){
@@ -28,8 +27,18 @@ void wostat::splitIfContained(std::string nwostart){
 	//if(this->
 
 }
-void wostat::setPos(GLfloat nx,GLfloat ny,GLfloat nz){
-	x=nx;y=ny;z=nz;
+void wostat::setPos(int vertex, GLfloat nx,GLfloat ny,GLfloat nz){
+	//fugly but clear code, next use an array
+	switch(vertex){
+		case 1: x1=nx;y1=ny;z1=nz;
+			break;
+		case 2: x2=nx;y2=ny;z2=nz;
+			break;
+		case 3: x3=nx;y3=ny;z3=nz;
+			break;
+		case 4: x4=nx;y4=ny;z4=nz;
+			break;
+	}
 }
 void wostat::setColor(GLfloat nr,GLfloat ng,GLfloat nb,GLfloat nalpha){
 	r=nr;g=ng;b=nb;alpha=nalpha;
@@ -100,88 +109,46 @@ bool wostat::update(std::string nwostart,std::string npid,std::string nwoseq, st
 void wostat::normalize(long min,long max){
 	//Some values might be unknown or not accounted for, they are set to -1
 	if(this->processstart == -1){
-		this->processstart = 0;
+		this->processstart = 1;
 	}else{
-		this->processstart-=min;
+		this->processstart-=(min-1);
 	}
 	if(this->processend == -1){
 		this->processend = max;
 	}else{
-		this->processend-=min;
+		this->processend-=(min-1);
 	}
 	if(this->next != NULL){
 		this->next->normalize(min,max);
 	}
 }
-/*GLfloat* wostat::generatewostat(){
-	GLfloat* polygonPoints = new GLfloat[7*this->sides];
-	int curpos = -1;
-	float angle = rotate;
-	float steps = 360.0f/this->sides;
-	for (int i = 0; i<this->sides;i++){
-		polygonPoints[++curpos]=x+(cos(angle*PI/180)*this->radius);
-		polygonPoints[++curpos]=y+(sin(angle*PI/180)*this->radius);
-		polygonPoints[++curpos]=this->z;
-		polygonPoints[++curpos]=this->r;
-		polygonPoints[++curpos]=this->g;
-		polygonPoints[++curpos]=this->b;
-		polygonPoints[++curpos]=this->alpha;
-		angle+=steps;
-	}
-	curpos-=3;
-	polygonPoints[++curpos]=1.0f;
-	polygonPoints[++curpos]=1.0f;
-	polygonPoints[++curpos]=1.0f;
-	return polygonPoints;
-}
- 
-
 void wostat::init_resources(){
-	GLfloat *vertices = generatewostat();
-	glGenBuffers(1, &this->vbo_vertices);
-	glBindBuffer(GL_ARRAY_BUFFER, this->vbo_vertices);
-	glBufferData(GL_ARRAY_BUFFER, sizeof(GLfloat)*this->sides*7, vertices, GL_STATIC_DRAW);
-	glBindBuffer(GL_ARRAY_BUFFER, 0);
-	
-	GLushort elements[this->sides];
-	for(int i=0;i<this->sides;i++)elements[i]=i;
-	glGenBuffers(1, &this->ibo_elements);
-	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, this->ibo_elements);
-	glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(elements), elements, GL_STATIC_DRAW);
-	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
-
+	glGenVertexArrays(NumVAOs,VAOs);
+	glBindVertexArray(VAOs[Triangles]);
+	//to be changet do use this->x,this->y, should also be [NumVertices][NumVertexAttribs]
+	GLfloat vertices[4][2] = {
+		{ this->x1,this->y1/*,this->z1,this->r,this->g,this->b,this->alpha*/},
+		{ this->x2,this->y2/*,this->z2,this->r,this->g,this->b,this->alpha*/},
+		{ this->x3,this->y3/*,this->z3,this->r,this->g,this->b,this->alpha*/},
+		{ this->x4,this->y4/*,this->z4,this->r,this->g,this->b,this->alpha*/},
+	};
+        glGenBuffers(NumBuffers,Buffers);
+        glBindBuffer(GL_ARRAY_BUFFER,Buffers[ArrayBuffer]);
+        glBufferData(GL_ARRAY_BUFFER,sizeof(vertices),vertices,GL_STATIC_DRAW);
+        glVertexAttribPointer(0,2,GL_FLOAT,GL_FALSE,0,0);
+        glEnableVertexAttribArray(0);
 }
 
-void wostat::onDisplay(GLint attribute_coord3d,GLint attribute_v_color){
-	glBindBuffer(GL_ARRAY_BUFFER, this->vbo_vertices);
-	glVertexAttribPointer(
-		attribute_coord3d, // attribute
-		3,                 // number of elements per vertex, here (x,y,z)
-		GL_FLOAT,          // the type of each element
-		GL_FALSE,          // take our values as-is
-		sizeof(GLfloat)*7, // 7 items, x,y,z,r,g,b,a
-		0  		   // Offset
-	);
-	glVertexAttribPointer(
-		attribute_v_color,      // attribute
-		4,                      // number of elements per vertex, here (r,g,b,a)
-		GL_FLOAT,               // the type of each element
-		GL_FALSE,               // take our values as-is
-		sizeof(GLfloat) * 7,    // next color appears every 7 floats
-		(GLvoid*) (3 * sizeof(GLfloat))  // offset of first element
-	);
-	glBindBuffer(GL_ARRAY_BUFFER, 0);
-	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, this->ibo_elements);
-	//TODO support fill wostats
-	glDrawElements(GL_LINE_LOOP, this->sides,GL_UNSIGNED_SHORT,0);
-	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
+void wostat::onDisplay(){
+        glBindVertexArray(VAOs[Triangles]);
+        glDrawArrays(GL_LINE_LOOP,0,NumVertices);
 }
-//call me onDisplay on main
-void wostat::displayAll(GLint attribute_coord3d,GLint attribute_v_color){
+
+void wostat::displayAll(){
 	if(this->next != NULL){
-		this->next->displayAll(attribute_coord3d,attribute_v_color);
+		this->next->displayAll();
 	}
-	this->onDisplay(attribute_coord3d,attribute_v_color);
+	this->onDisplay();
 }
 //Call me on init_resources on main
 void wostat::initAll(){
@@ -189,7 +156,7 @@ void wostat::initAll(){
 		this->next->initAll();
 	}
 	this->init_resources();
-}*/
+}
 //Call me on free_resources on main
 void wostat::deleteAll(){
 	if(this->next != NULL){
