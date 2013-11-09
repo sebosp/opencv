@@ -13,9 +13,10 @@ while(/bin/true); do
 		killall triangle 2>&-;
 		make clean;
 		make;
+		execFilename=$(echo $fname|sed 's/\..*//');
 		if [ "0" -eq "$?" ];then
-			times ./triangle
-			./triangle
+			times ./$execFilename
+			./$execFilename
 		fi;
 	fi
 	pt=$ct;

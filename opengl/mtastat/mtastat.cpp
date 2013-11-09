@@ -148,20 +148,10 @@ int gatherMTAData(void){
 	root->next->normalize(minproc,maxproc);
 	root->processend=maxproc;
 	tmp = root->next;
-	#ifdef _DEBUG
 	count=0;
 	string refid;
+	cout << "vertices = [" << endl;
 	while(tmp != NULL){
-		cout << "[II] i : "  << count;
-/*		cout << " = wostart " << tmp->wostart;
-		cout << " pid " << tmp->pid;
-		cout << " woseq " << tmp->woseq;
-		cout << " aid " << tmp->aid;
-		cout << " size " << tmp->size;
-		cout << " soft " << tmp->soft;
-		cout << " hard " << tmp->hard;*/
-		cout << " processstart " << tmp->processstart;
-		cout << " processend " << tmp->processend;
 		//preset to CCW...
 		tmp->x1=(1.9*tmp->processend/maxproc)-1.0f;
 		tmp->x2=tmp->x1;
@@ -169,18 +159,52 @@ int gatherMTAData(void){
 		tmp->x4=tmp->x3;
 		refid=tmp->pid+tmp->wostart+tmp->woseq;
 		tmp->raiseOverlaps(tmp->processstart,tmp->processend,tmp->y1,refid);
-		cout << " x1 " << tmp->x1 << " y1 " << tmp->y1 << endl;
-		cout << " x2 " << tmp->x2 << " y2 " << tmp->y2 << endl;
-		cout << " x3 " << tmp->x3 << " y3 " << tmp->y3 << endl;
-		cout << " x4 " << tmp->x4 << " y4 " << tmp->y4 << endl;
-		//cout << endl;
+		//MEH, IBOs next time
+		cout << tmp->x1 << "," << tmp->y1 << ",0.0," << endl;
+		cout << tmp->x2 << "," << tmp->y2 << ",0.0," << endl;
+		cout << tmp->x3 << "," << tmp->y3 << ",0.0," << endl;
+		cout << tmp->x2 << "," << tmp->y2 << ",0.0," << endl;
+		cout << tmp->x3 << "," << tmp->y3 << ",0.0," << endl;
+		cout << tmp->x4 << "," << tmp->y4 << ",0.0," << endl;
+		cout << tmp->x3 << "," << tmp->y3 << ",0.0," << endl;
+		cout << tmp->x4 << "," << tmp->y4 << ",0.0," << endl;
+		cout << tmp->x1 << "," << tmp->y1 << ",0.0," << endl;
 		count++;
 		tmp=tmp->next;
 	}
-	#endif
+	cout << "];" << endl;
+	tmp = root->next;
+	cout << "colors = [" << endl;
+	GLfloat r,g,b,alpha;
+	unsigned pos;
+	alpha=1.0f;
+	while(tmp != NULL){
+		if(tmp->r == 0.0f && tmp->g == 0.0f && tmp->b == 0.0f){
+			r=(float)(rand()%100)/100;
+			g=(float)(rand()%100)/100;
+			b=(float)(rand()%100)/100;
+			pos = tmp->woseq.find("-");
+			refid = tmp->wostart+tmp->pid+(pos != string::npos?tmp->woseq.substr(0,pos):tmp->woseq);
+			tmp->infect(r,g,b,alpha,refid);
+		}
+		tmp->raiseOverlaps(tmp->processstart,tmp->processend,tmp->y1,refid);
+		//MEH, IBOs next time
+		cout << tmp->r << "," << tmp->g << "," << tmp->b << "," << tmp->alpha << "," << endl;
+		cout << tmp->r << "," << tmp->g << "," << tmp->b << "," << tmp->alpha << "," << endl;
+		cout << tmp->r << "," << tmp->g << "," << tmp->b << "," << tmp->alpha << "," << endl;
+		cout << tmp->r << "," << tmp->g << "," << tmp->b << "," << tmp->alpha << "," << endl;
+		cout << tmp->r << "," << tmp->g << "," << tmp->b << "," << tmp->alpha << "," << endl;
+		cout << tmp->r << "," << tmp->g << "," << tmp->b << "," << tmp->alpha << "," << endl;
+		cout << tmp->r << "," << tmp->g << "," << tmp->b << "," << tmp->alpha << "," << endl;
+		cout << tmp->r << "," << tmp->g << "," << tmp->b << "," << tmp->alpha << "," << endl;
+		cout << tmp->r << "," << tmp->g << "," << tmp->b << "," << tmp->alpha << "," << endl;
+		count++;
+		tmp=tmp->next;
+	}
+	cout << "];" << endl;
 	return count;
 }
-void init(int numUnits){
+void init(){
 	GLint link_ok = GL_FALSE;
 	GLuint vs, fs;
 	if ((vs = create_shader("mtastat.v.glsl", GL_VERTEX_SHADER))   == 0) return;
@@ -222,11 +246,11 @@ int main(int argc, char* argv[]){
 	glewExperimental = GL_TRUE;
 	GLenum glew_status = glewInit();
 	if (glew_status != GLEW_OK){
-		fprintf(stderr, "Error: %s\n", glewGetErrorString(glew_status));
+		fprintf(stderr, "EE: %s\n", glewGetErrorString(glew_status));
 		return EXIT_FAILURE;
 	}
 	//printf("Got opengl version: %s\n", glGetString(GL_VERSION));
-	init(numUnits);
+	init();
 	glutKeyboardFunc (Keyboard);
 	glutDisplayFunc(display);
 	glutMainLoop();

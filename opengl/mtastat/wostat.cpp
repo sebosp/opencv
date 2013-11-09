@@ -20,6 +20,7 @@ wostat::wostat(std::string nwostart,std::string npid,std::string nwoseq,long npr
 	//preorganized to CCW so 45,135,225,315 degrees...
 	ystep=0.05f;
 	y1=0.0f;y2=ystep;y3=ystep;y4=0.0f;
+	r=0.0f;g=0.0f;b=0.0f;
 }
 wostat::~wostat(){
 	if(this->prev != NULL){
@@ -28,11 +29,7 @@ wostat::~wostat(){
 }
 void wostat::raiseOverlaps(long min, long max,GLfloat height,std::string refid){
 	std::string curid=this->pid+this->wostart+this->woseq;
-	if (refid == "209452615013825728060017-2" && curid == "209452615013825728060002-5"){
-		std::cout << " " << this->processstart << " <= " << min << " && " << this->processend << " <= " << max << " && " << height << " == " << this->y1  << " && " << refid << " != " << curid << std::endl;
-	}
-	if(((this->processstart <= min && this->processend <= max )||(min <= this->processstart && max <= this->processend)) && height == this->y1 && refid != curid){
-		printf("Changing something\n");
+	if(min <= this->processend && this->processstart <= max && height == this->y1 && refid != curid){
 		this->y1+=this->ystep;this->y2+=this->ystep;this->y3+=this->ystep;this->y4+=this->ystep;
 	}
 	if(this->next){
@@ -54,6 +51,9 @@ void wostat::setPos(int vertex, GLfloat nx,GLfloat ny,GLfloat nz){
 	}
 }
 void wostat::setColor(GLfloat nr,GLfloat ng,GLfloat nb,GLfloat nalpha){
+	r=nr;g=ng;b=nb;alpha=nalpha;
+}
+void wostat::infect(GLfloat nr,GLfloat ng,GLfloat nb,GLfloat nalpha,string refid){
 	r=nr;g=ng;b=nb;alpha=nalpha;
 }
 bool wostat::exists(std::string nwostart,std::string npid,std::string nwoseq){
