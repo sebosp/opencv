@@ -4,27 +4,39 @@
         <script src="sylvester.js" type="text/javascript"></script>
         <script src="glUtils.js" type="text/javascript"></script>
     </head>
-    <body onload="">
+    <body onload="startGL()">
         <canvas id="glcanvas" width="640" height="480">
             Your browser doesn't appear to support the HTML5 <code>&lt;canvas&gt;</code> element.
         </canvas>
-        <script id="shader-fs" type="x-shader/x-fragment">
+        <script id="shader-fs1" type="x-shader/x-fragment">
+        precision mediump float;
+        varying vec4 vColor;
         void main(void) {
-            gl_FragColor = vec4(1.0, 1.0, 1.0, 1.0);
+            gl_FragColor = vColor;
+        }
+        </script>
+        <script id="shader-fs" type="x-shader/x-fragment">
+        precision mediump float;
+        varying vec4 vColor;
+        void main(void) {
+            gl_FragColor = vColor;
         }
         </script>
         <script id="shader-vs" type="x-shader/x-vertex">
             attribute vec3 aVertexPosition;
+            attribute vec4 aVertexColor;
             uniform mat4 uMVMatrix;
             uniform mat4 uPMatrix;
+            varying vec4 vColor;
             void main(void) {
                 gl_Position = uPMatrix * uMVMatrix * vec4(aVertexPosition, 1.0);
+                vColor = aVertexColor;
             }
         </script>
-        <div><input type="button" onClick="startGL()" value="Start GL"/>
+        <!--<div><input type="button" onClick="" value="Start GL"/>
         </div>
         Paste MTA Data:
         <textarea id="mtaData"></textarea>
-        <div><input type="button" onClick="startGL()" value="Start GL"/>
+        <div><input type="button" onClick="startGL()" value="Start GL"/>-->
     </body>
 </html>
