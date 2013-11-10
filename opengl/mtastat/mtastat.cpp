@@ -60,6 +60,18 @@ int gatherMTAData(void){
 	long processstart,processend;
 	processstart=processend=0;
 	root=new wostat(wostart,pid,woseq,processstart);
+	root->x1=1.1f;
+	root->x2=1.1f;
+	root->x3=-1.1f;
+	root->x4=-1.1f;
+	root->y1=0.0f;
+	root->y2=0.5f;
+	root->y3=0.5f;
+	root->y4=0.0f;
+	GLfloat r,g,b,alpha;
+	alpha=1.0f;r=1.0f;g=1.0f;b=1.0f;
+	root->r=r;root->g=g;root->b=b;
+	alpha=1.0f;
 	wostat *tmp;
 	regex wsre("^([-0-9: ]{19})\\.\\d* \\d* pbs: \\(Q*(\\d*)_*(\\d*)_(\\d*)_([-\\d]*)\\) Starting on.*$",flags);
 	regex were("^([-0-9: ]{19})\\.\\d* \\d* pbs: \\(Q*(\\d*)_*(\\d*)_(\\d*)_([-\\d]*)\\) done with.*; \\((\\d+)\\) (\\d+) total, (\\d+) S, (\\d+) T \\(R.(\\d*),.*$",flags);
@@ -114,7 +126,7 @@ int gatherMTAData(void){
 					root->add(tmp);
 				}
 				if(!root->update(wostart,pid,woseq,aid,size,soft,hard,processend,sent)){
-					cout << "[EE] Could not update, bad data in wo stats?"<< endl;
+					cout << "[EE] Could not update, bad data in wo stats? line " << line << endl;
 				}
 			}else{
 				cout << "[EE]: Pattern not found for line -> " << line << endl;
@@ -129,16 +141,22 @@ int gatherMTAData(void){
 		fprintf(stderr, "EE: No entries processable found...\n");
 		return 0;
 	}
-	tmp=root->next;
 	int count = 0;
 	long minproc=LONG_MAX;
 	long maxproc=-1;
+	tmp=root->next;
 	while(tmp != NULL){
 		if(minproc > tmp->processstart && tmp->processstart > 0){
 			minproc = tmp->processstart;
 		}
+		if(minproc > tmp->processend && tmp->processend > 0){//We may have only the end of a wo process
+			minproc = tmp->processend;
+		}
 		if(maxproc < tmp->processend && tmp->processend > 0){
 			maxproc = tmp->processend;
+		}
+		if(maxproc < tmp->processstart && tmp->processstart > 0){//We may only have the start of a wo process
+			maxproc = tmp->processstart;
 		}
 		count++;
 		tmp=tmp->next;
@@ -148,17 +166,36 @@ int gatherMTAData(void){
 	root->next->normalize(minproc,maxproc);
 	root->processend=maxproc;
 	tmp = root->next;
-	count=0;
-	string refid;
-	cout << "vertices = [" << endl;
-	while(tmp != NULL){
+	//Let's translate x (and y initially...)
+	while(tmp){
 		//preset to CCW...
+		//cout << "Transforming ( " << tmp->processstart << "," << tmp->processend << ") to: ";
 		tmp->x1=(1.9*tmp->processend/maxproc)-1.0f;
 		tmp->x2=tmp->x1;
 		tmp->x3=(1.9*tmp->processstart/maxproc)-1.0f;
 		tmp->x4=tmp->x3;
-		refid=tmp->pid+tmp->wostart+tmp->woseq;
-		tmp->raiseOverlaps(tmp->processstart,tmp->processend,tmp->y1,refid);
+		//cout << "(" << tmp->x1 << "," << tmp->x3 << ")" << endl;
+		tmp=tmp->next;
+	}
+	//Slaves max is hardcoded to 30... altho what about the 40x bank?XXX
+	wostat *tail = root->next;
+	while(tail->next)tail=tail->next;
+	string refid,tempid;
+	for(GLfloat tempy=0.0f;tempy < (root->ystep * 60);tempy+=root->ystep){
+		tmp = root->next;
+		while(tmp){
+			if(tmp->y1 == tempy){
+				while(tmp->detectOverlaps(tmp->processstart,tmp->processend,tmp->y1,tmp->fullid)){
+					tail->raiseMinOverlaps(tmp->processstart,tmp->processend,tmp->y1,tmp->fullid);
+				}
+			}
+			tmp=tmp->next;
+		}
+	}
+	#ifdef _WEBGL
+	cout << "vertices = [" << endl;
+	tmp = root->next;
+	while(tmp != NULL){
 		//MEH, IBOs next time
 		cout << tmp->x1 << "," << tmp->y1 << ",0.0," << endl;
 		cout << tmp->x2 << "," << tmp->y2 << ",0.0," << endl;
@@ -169,26 +206,23 @@ int gatherMTAData(void){
 		cout << tmp->x3 << "," << tmp->y3 << ",0.0," << endl;
 		cout << tmp->x4 << "," << tmp->y4 << ",0.0," << endl;
 		cout << tmp->x1 << "," << tmp->y1 << ",0.0," << endl;
-		count++;
 		tmp=tmp->next;
 	}
 	cout << "];" << endl;
-	tmp = root->next;
 	cout << "colors = [" << endl;
-	GLfloat r,g,b,alpha;
-	unsigned pos;
-	alpha=1.0f;
+	#endif
+	tmp = root->next;
+	//Colorize different IDs
+	srand(time(0));
 	while(tmp != NULL){
 		if(tmp->r == 0.0f && tmp->g == 0.0f && tmp->b == 0.0f){
 			r=(float)(rand()%100)/100;
 			g=(float)(rand()%100)/100;
 			b=(float)(rand()%100)/100;
-			pos = tmp->woseq.find("-");
-			refid = tmp->wostart+tmp->pid+(pos != string::npos?tmp->woseq.substr(0,pos):tmp->woseq);
-			tmp->infect(r,g,b,alpha,refid);
+			tmp->infect(r,g,b,alpha,tmp->depid);
 		}
-		tmp->raiseOverlaps(tmp->processstart,tmp->processend,tmp->y1,refid);
 		//MEH, IBOs next time
+		#ifdef _WEBGL
 		cout << tmp->r << "," << tmp->g << "," << tmp->b << "," << tmp->alpha << "," << endl;
 		cout << tmp->r << "," << tmp->g << "," << tmp->b << "," << tmp->alpha << "," << endl;
 		cout << tmp->r << "," << tmp->g << "," << tmp->b << "," << tmp->alpha << "," << endl;
@@ -198,10 +232,14 @@ int gatherMTAData(void){
 		cout << tmp->r << "," << tmp->g << "," << tmp->b << "," << tmp->alpha << "," << endl;
 		cout << tmp->r << "," << tmp->g << "," << tmp->b << "," << tmp->alpha << "," << endl;
 		cout << tmp->r << "," << tmp->g << "," << tmp->b << "," << tmp->alpha << "," << endl;
+		#endif
 		count++;
 		tmp=tmp->next;
 	}
+	#ifdef _WEBGL
 	cout << "];" << endl;
+	#endif
+	//root->next->printAll();
 	return count;
 }
 void init(){
@@ -249,6 +287,8 @@ int main(int argc, char* argv[]){
 		fprintf(stderr, "EE: %s\n", glewGetErrorString(glew_status));
 		return EXIT_FAILURE;
 	}
+	glEnable(GL_DEPTH_TEST);
+	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 	//printf("Got opengl version: %s\n", glGetString(GL_VERSION));
 	init();
 	glutKeyboardFunc (Keyboard);

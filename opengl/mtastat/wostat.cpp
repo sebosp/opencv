@@ -21,40 +21,49 @@ wostat::wostat(std::string nwostart,std::string npid,std::string nwoseq,long npr
 	ystep=0.05f;
 	y1=0.0f;y2=ystep;y3=ystep;y4=0.0f;
 	r=0.0f;g=0.0f;b=0.0f;
+	fullid=npid+nwostart+nwoseq;
+	unsigned pos = this->woseq.find("-");
+	depid = this->wostart+this->pid+(pos != std::string::npos?this->woseq.substr(0,pos):this->woseq);
 }
 wostat::~wostat(){
 	if(this->prev != NULL){
 		this->prev->next = this->next;
 	}
 }
-void wostat::raiseOverlaps(long min, long max,GLfloat height,std::string refid){
-	std::string curid=this->pid+this->wostart+this->woseq;
-	if(min <= this->processend && this->processstart <= max && height == this->y1 && refid != curid){
-		this->y1+=this->ystep;this->y2+=this->ystep;this->y3+=this->ystep;this->y4+=this->ystep;
+void wostat::raiseMinOverlaps(long min, long max,GLfloat height,std::string refid){
+	if(height == this->y1){
+		if(min <= this->processend && this->processstart <= max && refid != this->fullid){
+				std::cout << "Raise: min: " << min << " <= procend: " << this->processend << " && procstart: " << this->processstart << " <=  max: " << max << " && " << refid << " !=  " << this->fullid << " theeeeen: " << (max-min) << " >= " << (this->processend-this->processstart) << " und y1: " << this->y1 << " height " << height << std::endl;
+			if(max-min >= this->processend-this->processstart){
+				this->y1+=this->ystep;this->y2+=this->ystep;this->y3+=this->ystep;this->y4+=this->ystep;
+			}
+		}
 	}
-	if(this->next){
-		this->next->raiseOverlaps(min,max,height,refid);
+	if(this->prev){
+		this->prev->raiseMinOverlaps(min,max,height,refid);
 	}
 
 }
-void wostat::setPos(int vertex, GLfloat nx,GLfloat ny,GLfloat nz){
-	//fugly but clear code, next use an array
-	switch(vertex){
-		case 1: x1=nx;y1=ny;z1=nz;
-			break;
-		case 2: x2=nx;y2=ny;z2=nz;
-			break;
-		case 3: x3=nx;y3=ny;z3=nz;
-			break;
-		case 4: x4=nx;y4=ny;z4=nz;
-			break;
+bool wostat::detectOverlaps(long min, long max,GLfloat height,std::string refid){
+	if(height == this->y1){
+		if(min <= this->processend && this->processstart <= max && refid != this->fullid){
+	//		std::cout << "Detect: " << min << " <= " << this->processend << " && " << this->processstart << " <= " << max << " && " << refid << " !=  " << this->fullid << std::endl;
+			return true;
+		}
+	}
+	if(this->next){
+		return(this->next->detectOverlaps(min,max,height,refid));
+	}else{
+		return(false);
 	}
 }
-void wostat::setColor(GLfloat nr,GLfloat ng,GLfloat nb,GLfloat nalpha){
-	r=nr;g=ng;b=nb;alpha=nalpha;
-}
-void wostat::infect(GLfloat nr,GLfloat ng,GLfloat nb,GLfloat nalpha,string refid){
-	r=nr;g=ng;b=nb;alpha=nalpha;
+void wostat::infect(GLfloat nr,GLfloat ng,GLfloat nb,GLfloat nalpha,std::string refid){
+	if(this->depid == refid){
+		r=nr;g=ng;b=nb;alpha=nalpha;
+	}
+	if(this->next){
+		this->next->infect(nr,ng,nb,nalpha,refid);
+	}
 }
 bool wostat::exists(std::string nwostart,std::string npid,std::string nwoseq){
 	if(this->wostart == nwostart && this->pid == npid && this->woseq == nwoseq){
@@ -124,12 +133,12 @@ void wostat::normalize(long min,long max){
 	if(this->processstart == -1){
 		this->processstart = 1;
 	}else{
-		this->processstart-=(min-1);
+		this->processstart-=min;
 	}
 	if(this->processend == -1){
-		this->processend = max;
+		this->processend = max*2;//basically outside of the map, the process is still running in our window
 	}else{
-		this->processend-=(min-1);
+		this->processend-=min;
 	}
 	if(this->next != NULL){
 		this->next->normalize(min,max);
@@ -137,26 +146,59 @@ void wostat::normalize(long min,long max){
 }
 void wostat::init_resources(){
 	glGenVertexArrays(NumVAOs,VAOs);
-	glBindVertexArray(VAOs[Triangles]);
-	//to be changet do use this->x,this->y, should also be [NumVertices][NumVertexAttribs]
-	GLfloat vertices[4][2] = {
-		{ this->x1,this->y1/*,this->z1,this->r,this->g,this->b,this->alpha*/},
-		{ this->x2,this->y2/*,this->z2,this->r,this->g,this->b,this->alpha*/},
-		{ this->x3,this->y3/*,this->z3,this->r,this->g,this->b,this->alpha*/},
-		{ this->x4,this->y4/*,this->z4,this->r,this->g,this->b,this->alpha*/},
+	glBindVertexArray(VAOs[WOTimes]);
+	//Should also be [NumVertices][NumVertexAttribs]
+	GLfloat vertices[4][7] = {
+		{ this->x1,this->y1,this->z1,this->r,this->g,this->b,this->alpha},
+		{ this->x2,this->y2,this->z2,this->r,this->g,this->b,this->alpha},
+		{ this->x3,this->y3,this->z3,this->r,this->g,this->b,this->alpha},
+		{ this->x4,this->y4,this->z4,this->r,this->g,this->b,this->alpha},
 	};
         glGenBuffers(NumBuffers,Buffers);
         glBindBuffer(GL_ARRAY_BUFFER,Buffers[ArrayBuffer]);
         glBufferData(GL_ARRAY_BUFFER,sizeof(vertices),vertices,GL_STATIC_DRAW);
-        glVertexAttribPointer(0,2,GL_FLOAT,GL_FALSE,0,0);
-        glEnableVertexAttribArray(0);
+        //glVertexAttribPointer(0,2,GL_FLOAT,GL_FALSE,0,0);
+        glVertexAttribPointer(
+		vPosition,
+		3,
+		GL_FLOAT,
+		GL_FALSE,
+		sizeof(GLfloat)*7,
+		0
+	);
+        glVertexAttribPointer(
+		vColor,
+		3,
+		GL_FLOAT,
+		GL_FALSE,
+		sizeof(GLfloat)*7,
+		(GLvoid*) (3 * sizeof(GLfloat))
+	);
+        glEnableVertexAttribArray(vPosition);
+        glEnableVertexAttribArray(vColor);
 }
 
 void wostat::onDisplay(){
-        glBindVertexArray(VAOs[Triangles]);
+        glBindVertexArray(VAOs[WOTimes]);
         glDrawArrays(GL_LINE_LOOP,0,NumVertices);
 }
+void wostat::printID(){
+	std::cout << this->pid+this->wostart+this->woseq << std::endl;
+}
 
+void wostat::printAll(){
+	/*std::cout << "wostat.cpp displayAll, x,y" << std::endl;
+	std::cout << this->x1 << "," << this->y1 << std::endl;
+	std::cout << this->x2 << "," << this->y2 << std::endl;
+	std::cout << this->x3 << "," << this->y3 << std::endl;
+	std::cout << this->x4 << "," << this->y4 << std::endl;*/
+	std::cout << "wostat::printAll " << std::endl;
+	std::cout << this->processstart << "," << this->processend << std::endl;
+	std::cout << this->x1 << "," << this->y1 << std::endl;
+	if(this->next){
+		this->next->printAll();
+	}
+}
 void wostat::displayAll(){
 	if(this->next != NULL){
 		this->next->displayAll();
@@ -176,4 +218,20 @@ void wostat::deleteAll(){
 		this->next->deleteAll();
 		delete(this->next);
 	}
+}
+void wostat::setPos(int vertex, GLfloat nx,GLfloat ny,GLfloat nz){
+	//fugly but clear code, next use an array
+	switch(vertex){
+		case 1: x1=nx;y1=ny;z1=nz;
+			break;
+		case 2: x2=nx;y2=ny;z2=nz;
+			break;
+		case 3: x3=nx;y3=ny;z3=nz;
+			break;
+		case 4: x4=nx;y4=ny;z4=nz;
+			break;
+	}
+}
+void wostat::setColor(GLfloat nr,GLfloat ng,GLfloat nb,GLfloat nalpha){
+	r=nr;g=ng;b=nb;alpha=nalpha;
 }
