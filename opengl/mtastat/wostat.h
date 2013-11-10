@@ -27,7 +27,7 @@ public:
 	wostat *prev;
 	wostat(std::string nwostart,std::string npid,std::string nwoseq,long nprocessstart);
 	~wostat();
-	void raiseMinOverlaps(long min, long max,GLfloat height,std::string refid);
+	void raiseMinOverlaps(long min, long max,GLfloat height,std::string refid,wostat* other);
 	bool detectOverlaps(long min, long max,GLfloat height,std::string refid);
 	bool exists(std::string nwostart,std::string npid,std::string nwoseq);
 	void setPos(int vertex, GLfloat nx,GLfloat ny,GLfloat nz);

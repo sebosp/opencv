@@ -18,8 +18,8 @@ wostat::wostat(std::string nwostart,std::string npid,std::string nwoseq,long npr
 	processstart=nprocessstart;
 	processend=-1;
 	//preorganized to CCW so 45,135,225,315 degrees...
-	ystep=0.05f;
-	y1=0.0f;y2=ystep;y3=ystep;y4=0.0f;
+	ystep=0.02f;
+	y1=-0.0f;y2=y1-ystep;y3=y1-ystep;y4=y1;
 	r=0.0f;g=0.0f;b=0.0f;
 	fullid=npid+nwostart+nwoseq;
 	unsigned pos = this->woseq.find("-");
@@ -30,17 +30,19 @@ wostat::~wostat(){
 		this->prev->next = this->next;
 	}
 }
-void wostat::raiseMinOverlaps(long min, long max,GLfloat height,std::string refid){
+void wostat::raiseMinOverlaps(long min, long max,GLfloat height,std::string refid,wostat* other){
 	if(height == this->y1){
 		if(min <= this->processend && this->processstart <= max && refid != this->fullid){
-				std::cout << "Raise: min: " << min << " <= procend: " << this->processend << " && procstart: " << this->processstart << " <=  max: " << max << " && " << refid << " !=  " << this->fullid << " theeeeen: " << (max-min) << " >= " << (this->processend-this->processstart) << " und y1: " << this->y1 << " height " << height << std::endl;
+				//std::cout << "Raise: min: " << min << " <= procend: " << this->processend << " && procstart: " << this->processstart << " <=  max: " << max << " && " << refid << " !=  " << this->fullid << " theeeeen: " << (max-min) << " >= " << (this->processend-this->processstart) << " und y1: " << this->y1 << " height " << height << std::endl;
 			if(max-min >= this->processend-this->processstart){
 				this->y1+=this->ystep;this->y2+=this->ystep;this->y3+=this->ystep;this->y4+=this->ystep;
+			}else{
+				other->y1+=other->ystep;other->y2+=other->ystep;other->y3+=other->ystep;other->y4+=other->ystep;
 			}
 		}
 	}
 	if(this->prev){
-		this->prev->raiseMinOverlaps(min,max,height,refid);
+		this->prev->raiseMinOverlaps(min,max,height,refid,other);
 	}
 
 }

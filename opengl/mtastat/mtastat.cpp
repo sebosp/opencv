@@ -185,8 +185,8 @@ int gatherMTAData(void){
 		tmp = root->next;
 		while(tmp){
 			if(tmp->y1 == tempy){
-				while(tmp->detectOverlaps(tmp->processstart,tmp->processend,tmp->y1,tmp->fullid)){
-					tail->raiseMinOverlaps(tmp->processstart,tmp->processend,tmp->y1,tmp->fullid);
+				if(tmp->detectOverlaps(tmp->processstart,tmp->processend,tmp->y1,tmp->fullid)){
+					tail->raiseMinOverlaps(tmp->processstart,tmp->processend,tmp->y1,tmp->fullid,tmp);
 				}
 			}
 			tmp=tmp->next;
