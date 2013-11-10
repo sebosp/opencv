@@ -64,14 +64,13 @@ int gatherMTAData(void){
 	root->x2=1.1f;
 	root->x3=-1.1f;
 	root->x4=-1.1f;
-	root->y1=0.0f;
-	root->y2=0.5f;
-	root->y3=0.5f;
-	root->y4=0.0f;
+	root->y1=-0.1f;
+	root->y2=0.8f;
+	root->y3=0.8f;
+	root->y4=-0.1f;
 	GLfloat r,g,b,alpha;
 	alpha=1.0f;r=1.0f;g=1.0f;b=1.0f;
 	root->r=r;root->g=g;root->b=b;
-	alpha=1.0f;
 	wostat *tmp;
 	regex wsre("^([-0-9: ]{19})\\.\\d* \\d* pbs: \\(Q*(\\d*)_*(\\d*)_(\\d*)_([-\\d]*)\\) Starting on.*$",flags);
 	regex were("^([-0-9: ]{19})\\.\\d* \\d* pbs: \\(Q*(\\d*)_*(\\d*)_(\\d*)_([-\\d]*)\\) done with.*; \\((\\d+)\\) (\\d+) total, (\\d+) S, (\\d+) T \\(R.(\\d*),.*$",flags);

@@ -18,9 +18,9 @@ wostat::wostat(std::string nwostart,std::string npid,std::string nwoseq,long npr
 	processstart=nprocessstart;
 	processend=-1;
 	//preorganized to CCW so 45,135,225,315 degrees...
-	ystep=0.02f;
-	y1=-0.0f;y2=y1-ystep;y3=y1-ystep;y4=y1;
-	r=0.0f;g=0.0f;b=0.0f;
+	ystep=0.03f;
+	y1=0.0f;y2=y1-ystep;y3=y1-ystep;y4=y1;
+	r=0.0f;g=1.0f;b=0.0f;
 	fullid=npid+nwostart+nwoseq;
 	unsigned pos = this->woseq.find("-");
 	depid = this->wostart+this->pid+(pos != std::string::npos?this->woseq.substr(0,pos):this->woseq);
