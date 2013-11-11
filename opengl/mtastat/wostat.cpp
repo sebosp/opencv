@@ -20,7 +20,7 @@ wostat::wostat(std::string nwostart,std::string npid,std::string nwoseq,long npr
 	//preorganized to CCW so 45,135,225,315 degrees...
 	ystep=0.03f;
 	y1=0.0f;y2=y1-ystep;y3=y1-ystep;y4=y1;
-	r=0.0f;g=1.0f;b=0.0f;
+	r=0.0f;g=0.0f;b=0.0f;
 	fullid=npid+nwostart+nwoseq;
 	unsigned pos = this->woseq.find("-");
 	depid = this->wostart+this->pid+(pos != std::string::npos?this->woseq.substr(0,pos):this->woseq);
@@ -31,18 +31,16 @@ wostat::~wostat(){
 	}
 }
 void wostat::raiseMinOverlaps(long min, long max,GLfloat height,std::string refid,wostat* other){
-	if(height == this->y1){
-		if(min <= this->processend && this->processstart <= max && refid != this->fullid){
-				//std::cout << "Raise: min: " << min << " <= procend: " << this->processend << " && procstart: " << this->processstart << " <=  max: " << max << " && " << refid << " !=  " << this->fullid << " theeeeen: " << (max-min) << " >= " << (this->processend-this->processstart) << " und y1: " << this->y1 << " height " << height << std::endl;
-			if(max-min >= this->processend-this->processstart){
-				this->y1+=this->ystep;this->y2+=this->ystep;this->y3+=this->ystep;this->y4+=this->ystep;
-			}else{
-				other->y1+=other->ystep;other->y2+=other->ystep;other->y3+=other->ystep;other->y4+=other->ystep;
-			}
+	if(height == this->y1 && min <= this->processend && this->processstart <= max && refid != this->fullid){
+			//std::cout << "Raise: min: " << min << " <= procend: " << this->processend << " && procstart: " << this->processstart << " <=  max: " << max << " && " << refid << " !=  " << this->fullid << " theeeeen: " << (max-min) << " >= " << (this->processend-this->processstart) << " und y1: " << this->y1 << " height " << height << std::endl;
+		if(max-min >= this->processend-this->processstart){
+			this->y1+=this->ystep;this->y2+=this->ystep;this->y3+=this->ystep;this->y4+=this->ystep;
+		}else{
+			other->y1+=other->ystep;other->y2+=other->ystep;other->y3+=other->ystep;other->y4+=other->ystep;
 		}
 	}
-	if(this->prev){
-		this->prev->raiseMinOverlaps(min,max,height,refid,other);
+	if(this->next){
+		this->next->raiseMinOverlaps(min,max,height,refid,other);
 	}
 
 }

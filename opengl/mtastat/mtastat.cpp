@@ -177,15 +177,13 @@ int gatherMTAData(void){
 		tmp=tmp->next;
 	}
 	//Slaves max is hardcoded to 30... altho what about the 40x bank?XXX
-	wostat *tail = root->next;
-	while(tail->next)tail=tail->next;
 	string refid,tempid;
 	for(GLfloat tempy=0.0f;tempy < (root->ystep * 60);tempy+=root->ystep){
 		tmp = root->next;
 		while(tmp){
 			if(tmp->y1 == tempy){
 				if(tmp->detectOverlaps(tmp->processstart,tmp->processend,tmp->y1,tmp->fullid)){
-					tail->raiseMinOverlaps(tmp->processstart,tmp->processend,tmp->y1,tmp->fullid,tmp);
+					root->next->raiseMinOverlaps(tmp->processstart,tmp->processend,tmp->y1,tmp->fullid,tmp);
 				}
 			}
 			tmp=tmp->next;
@@ -212,7 +210,7 @@ int gatherMTAData(void){
 	#endif
 	tmp = root->next;
 	//Colorize different IDs
-	srand(time(0));
+	//srand(time(0));
 	while(tmp != NULL){
 		if(tmp->r == 0.0f && tmp->g == 0.0f && tmp->b == 0.0f){
 			r=(float)(rand()%100)/100;
@@ -276,7 +274,7 @@ int main(int argc, char* argv[]){
 	}
 	glutInit(&argc,argv);
 	glutInitDisplayMode(GLUT_RGBA);
-	glutInitWindowSize(1024,768);
+	glutInitWindowSize(1920,1080);
 	glutInitContextVersion(4,3);
 	glutInitContextProfile(GLUT_CORE_PROFILE);
 	glutCreateWindow(argv[0]);
