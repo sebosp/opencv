@@ -140,7 +140,6 @@ int gatherMTAData(void){
 		fprintf(stderr, "EE: No entries processable found...\n");
 		return 0;
 	}
-	int count = 0;
 	long minproc=LONG_MAX;
 	long maxproc=-1;
 	tmp=root->next;
@@ -157,13 +156,13 @@ int gatherMTAData(void){
 		if(maxproc < tmp->processstart && tmp->processstart > 0){//We may only have the start of a wo process
 			maxproc = tmp->processstart;
 		}
-		count++;
 		tmp=tmp->next;
 	}
+	tmp=root->next;
 	cout << "Minimizing epochs: (" << minproc << "," << maxproc << ") to: (0," << (maxproc-minproc) << ")" << endl;
 	maxproc=maxproc-minproc;
 	root->next->normalize(minproc,maxproc);
-	root->processend=maxproc;
+	minproc=0;
 	tmp = root->next;
 	//Let's translate x (and y initially...)
 	while(tmp){
@@ -176,17 +175,23 @@ int gatherMTAData(void){
 		//cout << "(" << tmp->x1 << "," << tmp->x3 << ")" << endl;
 		tmp=tmp->next;
 	}
-	//Slaves max is hardcoded to 30... altho what about the 40x bank?XXX
-	string refid,tempid;
-	for(GLfloat tempy=0.0f;tempy < (root->ystep * 60);tempy+=root->ystep){
-		tmp = root->next;
-		while(tmp){
-			if(tmp->y1 == tempy){
-				if(tmp->detectOverlaps(tmp->processstart,tmp->processend,tmp->y1,tmp->fullid)){
-					root->next->raiseMinOverlaps(tmp->processstart,tmp->processend,tmp->y1,tmp->fullid,tmp);
-				}
-			}
-			tmp=tmp->next;
+	int count = 1;
+	//Order them by size
+	tmp=root->findUnassignedMax(root);
+	while(!root->isSizeFinished()){
+		count++;
+		tmp->sizeIndex=count;
+		//cout << "id: " << tmp->fullid << " . size " << tmp->processend - tmp->processstart << ". count... " << count << endl;
+		tmp=root->findUnassignedMax(root);
+	}
+	root->processend=maxproc;//We need to have this preserved to -1 until after the sizeOrder...
+	for(int iter = 0;iter < count;iter++){
+		tmp=root->getItemBySizeIndex(iter);
+		if(tmp){
+			cout << "id: " << tmp->fullid << " . size " << tmp->processend - tmp->processstart << ". count... " << count << endl;
+			//while(root->detectOverlaps(tmp->processstart,tmp->processend,tmp->y1,tmp->fullid))//XXX
+			for(int j=0;j<30;j++)
+			root->next->raiseMinOverlaps(tmp->processstart,tmp->processend,tmp->y1,tmp->fullid);
 		}
 	}
 	#ifdef _WEBGL
@@ -210,7 +215,8 @@ int gatherMTAData(void){
 	#endif
 	tmp = root->next;
 	//Colorize different IDs
-	//srand(time(0));
+	srand(time(0));
+	count=0;
 	while(tmp != NULL){
 		if(tmp->r == 0.0f && tmp->g == 0.0f && tmp->b == 0.0f){
 			r=(float)(rand()%100)/100;

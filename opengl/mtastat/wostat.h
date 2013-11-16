@@ -22,18 +22,22 @@ public:
 	GLuint Buffers[NumBuffers];
 	const GLuint NumVertices;
 	const GLuint NumVertexAttribs;
+	int sizeIndex;
 
 	wostat *next;
 	wostat *prev;
 	wostat(std::string nwostart,std::string npid,std::string nwoseq,long nprocessstart);
 	~wostat();
-	void raiseMinOverlaps(long min, long max,GLfloat height,std::string refid,wostat* other);
+	void raiseMinOverlaps(long min, long max,GLfloat height,std::string refid);
 	bool detectOverlaps(long min, long max,GLfloat height,std::string refid);
+	wostat* findUnassignedMax(wostat * candidate);
 	bool exists(std::string nwostart,std::string npid,std::string nwoseq);
 	void setPos(int vertex, GLfloat nx,GLfloat ny,GLfloat nz);
 	void setColor(GLfloat nr,GLfloat ng,GLfloat nb,GLfloat nalpha);
 	void infect(GLfloat nr,GLfloat ng,GLfloat nb,GLfloat nalpha, std::string refid);
 	void add(wostat *tmp);
+	bool isSizeFinished();
+	wostat* getItemBySizeIndex(int sizeIdx);
 	bool update(std::string nwostart,std::string npid,std::string nwoseq, std::string naid, int nsize, int nsoft, int nhard, long nprocessend,int sent);
 	void normalize(long min,long max);
 	void init_resources();

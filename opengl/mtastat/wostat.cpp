@@ -8,6 +8,7 @@
 #include "wostat.h"
 #define PI 3.1415926535897932384626433832795
 //GLint attribute_coord3d,attribute_v_color,uniform_mvp;
+//TODO: Cammel case.
 wostat::wostat(std::string nwostart,std::string npid,std::string nwoseq,long nprocessstart)
 :size(0),soft(0),hard(0),sent(0),NumVertices(4),NumVertexAttribs(7){
 	wostart=nwostart;
@@ -24,38 +25,58 @@ wostat::wostat(std::string nwostart,std::string npid,std::string nwoseq,long npr
 	fullid=npid+nwostart+nwoseq;
 	unsigned pos = this->woseq.find("-");
 	depid = this->wostart+this->pid+(pos != std::string::npos?this->woseq.substr(0,pos):this->woseq);
+	sizeIndex = 0;
 }
 wostat::~wostat(){
 	if(this->prev != NULL){
 		this->prev->next = this->next;
 	}
 }
-void wostat::raiseMinOverlaps(long min, long max,GLfloat height,std::string refid,wostat* other){
+void wostat::raiseMinOverlaps(long min, long max,GLfloat height,std::string refid){
 	if(height == this->y1 && min <= this->processend && this->processstart <= max && refid != this->fullid){
 			//std::cout << "Raise: min: " << min << " <= procend: " << this->processend << " && procstart: " << this->processstart << " <=  max: " << max << " && " << refid << " !=  " << this->fullid << " theeeeen: " << (max-min) << " >= " << (this->processend-this->processstart) << " und y1: " << this->y1 << " height " << height << std::endl;
 		if(max-min >= this->processend-this->processstart){
 			this->y1+=this->ystep;this->y2+=this->ystep;this->y3+=this->ystep;this->y4+=this->ystep;
-		}else{
-			other->y1+=other->ystep;other->y2+=other->ystep;other->y3+=other->ystep;other->y4+=other->ystep;
 		}
 	}
 	if(this->next){
-		this->next->raiseMinOverlaps(min,max,height,refid,other);
+		this->next->raiseMinOverlaps(min,max,height,refid);
 	}
 
 }
 bool wostat::detectOverlaps(long min, long max,GLfloat height,std::string refid){
-	if(height == this->y1){
-		if(min <= this->processend && this->processstart <= max && refid != this->fullid){
-	//		std::cout << "Detect: " << min << " <= " << this->processend << " && " << this->processstart << " <= " << max << " && " << refid << " !=  " << this->fullid << std::endl;
-			return true;
-		}
+	if(height == this->y1 && min <= this->processend && this->processstart <= max && refid != this->fullid){
+	//	std::cout << "Detect: " << min << " <= " << this->processend << " && " << this->processstart << " <= " << max << " && " << refid << " !=  " << this->fullid << std::endl;
+		return true;
 	}
 	if(this->next){
 		return(this->next->detectOverlaps(min,max,height,refid));
-	}else{
-		return(false);
 	}
+	return(false);
+}
+wostat* wostat::findUnassignedMax(wostat * candidate){
+	if(this->sizeIndex == 0 && candidate->processend - candidate->processstart < this->processend - this->processstart){
+		return(this->next ? this->next->findUnassignedMax(this) : this);
+	}
+	return(this->next ? this->next->findUnassignedMax(candidate) : candidate);
+}
+bool wostat::isSizeFinished(){
+	if(this->sizeIndex == 0 && this->processend - this->processstart > -1){
+		std::cout << "isSizeFinished: " << this->fullid << ". sizeIndex: " << this->sizeIndex << " size: " << this->processend - this->processstart << std::endl;
+		return false;
+	}
+	if(this->next)
+		return(this->next->isSizeFinished());
+	return true;
+}
+wostat* wostat::getItemBySizeIndex(int sizeIdx){
+	if(this->sizeIndex == sizeIdx){
+		return(this);
+	}
+	if(this->next){
+		return(this->next->getItemBySizeIndex(sizeIdx));
+	}
+	return(NULL);
 }
 void wostat::infect(GLfloat nr,GLfloat ng,GLfloat nb,GLfloat nalpha,std::string refid){
 	if(this->depid == refid){
@@ -136,7 +157,7 @@ void wostat::normalize(long min,long max){
 		this->processstart-=min;
 	}
 	if(this->processend == -1){
-		this->processend = max*2;//basically outside of the map, the process is still running in our window
+		this->processend = max+10;//basically outside of the map, the process is still running in our window
 	}else{
 		this->processend-=min;
 	}
