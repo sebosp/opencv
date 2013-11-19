@@ -181,18 +181,39 @@ int gatherMTAData(void){
 	while(!root->isSizeFinished()){
 		count++;
 		tmp->sizeIndex=count;
-		//cout << "id: " << tmp->fullid << " . size " << tmp->processend - tmp->processstart << ". count... " << count << endl;
+		cout << "id: " << tmp->fullid << " . size " << tmp->processend - tmp->processstart << ". count... " << count << endl;
 		tmp=root->findUnassignedMax(root);
 	}
 	root->processend=maxproc;//We need to have this preserved to -1 until after the sizeOrder...
-	for(int iter = 0;iter < count;iter++){
-		tmp=root->getItemBySizeIndex(iter);
-		if(tmp){
-			cout << "id: " << tmp->fullid << " . size " << tmp->processend - tmp->processstart << ". count... " << count << endl;
-			//while(root->detectOverlaps(tmp->processstart,tmp->processend,tmp->y1,tmp->fullid))//XXX
-			for(int j=0;j<30;j++)
-			root->next->raiseMinOverlaps(tmp->processstart,tmp->processend,tmp->y1,tmp->fullid);
+	wostat *tmpA, *tmpB;
+	cout << "We got " << count << " items " << endl;
+	for(int iterA = 1;iterA <= count;iterA++){
+		tmpA=root->getItemBySizeIndex(iterA);
+		if(!tmpA){
+			continue;
 		}
+		cout << "id: " << tmpA->fullid << " . size " << tmp->processend - tmp->processstart << ". count... " << count << "iterA = " << iterA << endl;
+		tmpA->y1=0.0f;
+		bool isFree=false;
+		while(!isFree){
+			isFree=true;
+			for(int iterB = 1;iterB < iterA;iterB++){
+				tmpB=root->getItemBySizeIndex(iterB);
+				if(!tmpB){
+					continue;
+				}
+				if(tmpA->y1 == tmpB->y1 && tmpA->processstart <= tmpB->processend && tmpB->processstart <= tmpA->processend){
+					tmpA->y1+=root->ystep;
+					iterB=1;
+				}
+			}
+			if(!isFree){
+				tmpA->y1+=root->ystep;
+			}else{
+				tmpA->raise(tmpA->y1);
+			}
+		}
+			//cout << "id: " << tmp->fullid << " . size " << tmp->processend - tmp->processstart << ". count... " << count << endl;
 	}
 	#ifdef _WEBGL
 	cout << "vertices = [" << endl;

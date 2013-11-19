@@ -28,7 +28,7 @@ public:
 	wostat *prev;
 	wostat(std::string nwostart,std::string npid,std::string nwoseq,long nprocessstart);
 	~wostat();
-	void raiseMinOverlaps(long min, long max,GLfloat height,std::string refid);
+	void raise(float newy);
 	bool detectOverlaps(long min, long max,GLfloat height,std::string refid);
 	wostat* findUnassignedMax(wostat * candidate);
 	bool exists(std::string nwostart,std::string npid,std::string nwoseq);

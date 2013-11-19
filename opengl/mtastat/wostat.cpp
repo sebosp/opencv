@@ -20,7 +20,7 @@ wostat::wostat(std::string nwostart,std::string npid,std::string nwoseq,long npr
 	processend=-1;
 	//preorganized to CCW so 45,135,225,315 degrees...
 	ystep=0.03f;
-	y1=0.0f;y2=y1-ystep;y3=y1-ystep;y4=y1;
+	y1=10.0f;//y2=y1-ystep;y3=y1-ystep;y4=y1; //We screwed up root!
 	r=0.0f;g=0.0f;b=0.0f;
 	fullid=npid+nwostart+nwoseq;
 	unsigned pos = this->woseq.find("-");
@@ -32,17 +32,11 @@ wostat::~wostat(){
 		this->prev->next = this->next;
 	}
 }
-void wostat::raiseMinOverlaps(long min, long max,GLfloat height,std::string refid){
-	if(height == this->y1 && min <= this->processend && this->processstart <= max && refid != this->fullid){
-			//std::cout << "Raise: min: " << min << " <= procend: " << this->processend << " && procstart: " << this->processstart << " <=  max: " << max << " && " << refid << " !=  " << this->fullid << " theeeeen: " << (max-min) << " >= " << (this->processend-this->processstart) << " und y1: " << this->y1 << " height " << height << std::endl;
-		if(max-min >= this->processend-this->processstart){
-			this->y1+=this->ystep;this->y2+=this->ystep;this->y3+=this->ystep;this->y4+=this->ystep;
-		}
-	}
-	if(this->next){
-		this->next->raiseMinOverlaps(min,max,height,refid);
-	}
-
+void wostat::raise(float newy){
+	this->y1=newy;
+	this->y2=this->y1-this->ystep;
+	this->y3=this->y1-this->ystep;
+	this->y4=this->y1;
 }
 bool wostat::detectOverlaps(long min, long max,GLfloat height,std::string refid){
 	if(height == this->y1 && min <= this->processend && this->processstart <= max && refid != this->fullid){
@@ -62,7 +56,6 @@ wostat* wostat::findUnassignedMax(wostat * candidate){
 }
 bool wostat::isSizeFinished(){
 	if(this->sizeIndex == 0 && this->processend - this->processstart > -1){
-		std::cout << "isSizeFinished: " << this->fullid << ". sizeIndex: " << this->sizeIndex << " size: " << this->processend - this->processstart << std::endl;
 		return false;
 	}
 	if(this->next)
