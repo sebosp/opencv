@@ -181,10 +181,24 @@ int gatherMTAData(void){
 	while(!root->isSizeFinished()){
 		count++;
 		tmp->sizeIndex=count;
-		cout << "id: " << tmp->fullid << " . size " << tmp->processend - tmp->processstart << ". count... " << count << endl;
+		//cout << "id: " << tmp->fullid << " . size " << tmp->processend - tmp->processstart << ". count... " << count << endl;
 		tmp=root->findUnassignedMax(root);
 	}
 	root->processend=maxproc;//We need to have this preserved to -1 until after the sizeOrder...
+	tmp = root->next;
+	srand(time(0));
+	while(tmp != NULL){
+		if(tmp->r == 0.0f && tmp->g == 0.0f && tmp->b == 0.0f){
+			r=(float)(rand()%100)/100;
+			g=(float)(rand()%100)/100;
+			b=(float)(rand()%100)/100;
+			tmp->infect(r,g,b,alpha,tmp->depid);
+		}
+		tmp=tmp->next;
+	}
+	return count;
+}
+void resolveOverlaps(int count){
 	wostat *tmpA, *tmpB;
 	cout << "We got " << count << " items " << endl;
 	for(int iterA = 1;iterA <= count;iterA++){
@@ -192,7 +206,7 @@ int gatherMTAData(void){
 		if(!tmpA){
 			continue;
 		}
-		cout << "id: " << tmpA->fullid << " . size " << tmp->processend - tmp->processstart << ". count... " << count << "iterA = " << iterA << endl;
+		//cout << "id: " << tmpA->fullid << " . size " << tmp->processend - tmp->processstart << ". count... " << count << "iterA =  " << iterA << endl;
 		tmpA->y1=0.0f;
 		bool isFree=false;
 		while(!isFree){
@@ -215,9 +229,11 @@ int gatherMTAData(void){
 		}
 			//cout << "id: " << tmp->fullid << " . size " << tmp->processend - tmp->processstart << ". count... " << count << endl;
 	}
-	#ifdef _WEBGL
+	return;
+}
+void printWebGL(){
 	cout << "vertices = [" << endl;
-	tmp = root->next;
+	wostat *tmp = root->next;
 	while(tmp != NULL){
 		//MEH, IBOs next time
 		cout << tmp->x1 << "," << tmp->y1 << ",0.0," << endl;
@@ -233,20 +249,10 @@ int gatherMTAData(void){
 	}
 	cout << "];" << endl;
 	cout << "colors = [" << endl;
-	#endif
 	tmp = root->next;
 	//Colorize different IDs
-	srand(time(0));
-	count=0;
 	while(tmp != NULL){
-		if(tmp->r == 0.0f && tmp->g == 0.0f && tmp->b == 0.0f){
-			r=(float)(rand()%100)/100;
-			g=(float)(rand()%100)/100;
-			b=(float)(rand()%100)/100;
-			tmp->infect(r,g,b,alpha,tmp->depid);
-		}
 		//MEH, IBOs next time
-		#ifdef _WEBGL
 		cout << tmp->r << "," << tmp->g << "," << tmp->b << "," << tmp->alpha << "," << endl;
 		cout << tmp->r << "," << tmp->g << "," << tmp->b << "," << tmp->alpha << "," << endl;
 		cout << tmp->r << "," << tmp->g << "," << tmp->b << "," << tmp->alpha << "," << endl;
@@ -256,15 +262,10 @@ int gatherMTAData(void){
 		cout << tmp->r << "," << tmp->g << "," << tmp->b << "," << tmp->alpha << "," << endl;
 		cout << tmp->r << "," << tmp->g << "," << tmp->b << "," << tmp->alpha << "," << endl;
 		cout << tmp->r << "," << tmp->g << "," << tmp->b << "," << tmp->alpha << "," << endl;
-		#endif
-		count++;
 		tmp=tmp->next;
 	}
-	#ifdef _WEBGL
 	cout << "];" << endl;
-	#endif
-	//root->next->printAll();
-	return count;
+	return;
 }
 void init(){
 	GLint link_ok = GL_FALSE;
@@ -293,8 +294,10 @@ void display(void){
 }
 
 int main(int argc, char* argv[]){
-	//move to after init
+	//1k = 1.953s,1.5k = 4.975s, 2.0ks = 13.685s,2.5ks = 24.861s, ... 3.5ks = 65.780s
+	//progression, every 500 lines it takes 2.5 times more than before to order.
 	int numUnits=gatherMTAData();
+	resolveOverlaps(numUnits);
 	if (numUnits < 1){
 		cout << "MTA Data not found:" << endl;
 		return EXIT_FAILURE;

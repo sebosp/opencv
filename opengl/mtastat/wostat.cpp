@@ -194,7 +194,7 @@ void wostat::init_resources(){
 
 void wostat::onDisplay(){
         glBindVertexArray(VAOs[WOTimes]);
-        glDrawArrays(GL_LINE_LOOP,0,NumVertices);
+        glDrawArrays(GL_POINTS,0,NumVertices);
 }
 void wostat::printID(){
 	std::cout << this->pid+this->wostart+this->woseq << std::endl;
