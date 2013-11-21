@@ -35,6 +35,7 @@ public:
 	void setPos(int vertex, GLfloat nx,GLfloat ny,GLfloat nz);
 	void setColor(GLfloat nr,GLfloat ng,GLfloat nb,GLfloat nalpha);
 	void infect(GLfloat nr,GLfloat ng,GLfloat nb,GLfloat nalpha, std::string refid);
+	void infectAID(GLfloat nr,GLfloat ng,GLfloat nb,GLfloat nalpha, std::string refaid);
 	void add(wostat *tmp);
 	bool isSizeFinished();
 	wostat* getItemBySizeIndex(int sizeIdx);

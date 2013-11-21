@@ -194,7 +194,8 @@ int gatherMTAData(void){
 			r=(float)(rand()%100)/100;
 			g=(float)(rand()%100)/100;
 			b=(float)(rand()%100)/100;
-			tmp->infect(r,g,b,alpha,tmp->depid);
+			//tmp->infect(r,g,b,alpha,tmp->depid);
+			tmp->infectAID(r,g,b,alpha,tmp->aid);
 		}
 		tmp=tmp->next;
 	}
@@ -300,6 +301,7 @@ int main(int argc, char* argv[]){
 	//progression, every 500 lines it takes 2.5 times more than before to order.
 	int numUnits=gatherMTAData();
 	resolveOverlaps(numUnits);
+	woroot->printAll();
 	if (numUnits < 1){
 		cout << "MTA Data not found:" << endl;
 		return EXIT_FAILURE;

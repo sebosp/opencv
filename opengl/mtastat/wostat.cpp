@@ -20,7 +20,7 @@ wostat::wostat(std::string nwostart,std::string npid,std::string nwoseq,long npr
 	processend=-1;
 	//preorganized to CCW so 45,135,225,315 degrees...
 	ystep=0.02f;
-	yoffset=0.001f;
+	yoffset=0.005f;
 	y1=10.0f;//y2=y1-ystep;y3=y1-ystep;y4=y1;
 	r=0.0f;g=0.0f;b=0.0f;
 	fullid=npid+nwostart+nwoseq;
@@ -35,8 +35,8 @@ wostat::~wostat(){
 }
 void wostat::raise(float newy){
 	this->y1=newy;
-	this->y2=this->y1+this->ystep;
-	this->y3=this->y1+this->ystep;
+	this->y2=this->y1-this->ystep;
+	this->y3=this->y1-this->ystep;
 	this->y4=this->y1;
 }
 bool wostat::detectOverlaps(long min, long max,GLfloat height,std::string refid){
@@ -78,6 +78,14 @@ void wostat::infect(GLfloat nr,GLfloat ng,GLfloat nb,GLfloat nalpha,std::string 
 	}
 	if(this->next){
 		this->next->infect(nr,ng,nb,nalpha,refid);
+	}
+}
+void wostat::infectAID(GLfloat nr,GLfloat ng,GLfloat nb,GLfloat nalpha,std::string refaid){
+	if(this->aid == refaid){
+		r=nr;g=ng;b=nb;alpha=nalpha;
+	}
+	if(this->next){
+		this->next->infect(nr,ng,nb,nalpha,refaid);
 	}
 }
 bool wostat::exists(std::string nwostart,std::string npid,std::string nwoseq){
@@ -208,7 +216,7 @@ void wostat::printAll(){
 	std::cout << this->x3 << "," << this->y3 << std::endl;
 	std::cout << this->x4 << "," << this->y4 << std::endl;*/
 	std::cout << "wostat::printAll " << std::endl;
-	std::cout << this->processstart << "," << this->processend << std::endl;
+	std::cout << this->fullid << "," << this->aid << std::endl;
 	std::cout << this->x1 << "," << this->y1 << std::endl;
 	if(this->next){
 		this->next->printAll();
