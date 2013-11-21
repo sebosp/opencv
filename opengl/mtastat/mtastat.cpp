@@ -20,18 +20,20 @@ using namespace boost;
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
 #include "wostat.h"
+//#include "pbstat.h"
 
 enum Attrib_IDs{vPosition=0};
 
 GLuint program;
-wostat *root;
+wostat *woroot;
+//pbstat *pbroot;
 
 const GLuint NumVertices = 6;
 
 void Keyboard(unsigned char key, int x, int y){
 	switch (key){
 		case 27:
-			root->deleteAll();
+			woroot->deleteAll();
 			exit (0);
 		break;
 	}
@@ -59,18 +61,18 @@ int gatherMTAData(void){
 	pid=wostart=woseq=aid="0";
 	long processstart,processend;
 	processstart=processend=0;
-	root=new wostat(wostart,pid,woseq,processstart);
-	root->x1=1.1f;
-	root->x2=1.1f;
-	root->x3=-1.1f;
-	root->x4=-1.1f;
-	root->y1=-0.1f;
-	root->y2=0.8f;
-	root->y3=0.8f;
-	root->y4=-0.1f;
+	woroot=new wostat(wostart,pid,woseq,processstart);
+	woroot->x1=1.1f;
+	woroot->x2=woroot->x1;
+	woroot->x3=-1.1f;
+	woroot->x4=-1.1f;
+	woroot->y1=0-woroot->ystep;
+	woroot->y2=woroot->ystep*30;//hardcoded max slaves? fugly. Sync somehow
+	woroot->y3=woroot->y2;
+	woroot->y4=woroot->y1;
 	GLfloat r,g,b,alpha;
 	alpha=1.0f;r=1.0f;g=1.0f;b=1.0f;
-	root->r=r;root->g=g;root->b=b;
+	woroot->r=r;woroot->g=g;woroot->b=b;
 	wostat *tmp;
 	regex wsre("^([-0-9: ]{19})\\.\\d* \\d* pbs: \\(Q*(\\d*)_*(\\d*)_(\\d*)_([-\\d]*)\\) Starting on.*$",flags);
 	regex were("^([-0-9: ]{19})\\.\\d* \\d* pbs: \\(Q*(\\d*)_*(\\d*)_(\\d*)_([-\\d]*)\\) done with.*; \\((\\d+)\\) (\\d+) total, (\\d+) S, (\\d+) T \\(R.(\\d*),.*$",flags);
@@ -98,7 +100,7 @@ int gatherMTAData(void){
 				pid=sm[4];
 				woseq=sm[5];
 				tmp=new wostat(wostart,pid,woseq,processstart);
-				root->add(tmp);
+				woroot->add(tmp);
 			}else if(regex_match(line,sm,were)){
 				processend=date_to_epoch(sm[1]);
 				if(processend  < 0){
@@ -117,14 +119,14 @@ int gatherMTAData(void){
 				hard=stoi(sm[8]);
 				soft=stoi(sm[9]);
 				sent=stoi(sm[10]);
-				if(!root->exists(wostart,pid,woseq)){
+				if(!woroot->exists(wostart,pid,woseq)){
 					//We might have partial information on the WO process...
 					//Let's set the processstart to -1, 
 					//special value we will adjust later to the minimum valid epoch found.
 					tmp=new wostat(wostart,pid,woseq,-1);
-					root->add(tmp);
+					woroot->add(tmp);
 				}
-				if(!root->update(wostart,pid,woseq,aid,size,soft,hard,processend,sent)){
+				if(!woroot->update(wostart,pid,woseq,aid,size,soft,hard,processend,sent)){
 					cout << "[EE] Could not update, bad data in wo stats? line " << line << endl;
 				}
 			}else{
@@ -136,13 +138,13 @@ int gatherMTAData(void){
 		fprintf(stderr, "EE: Unable to open file\n");
 		return 0;
 	}
-	if(!root->next){
+	if(!woroot->next){
 		fprintf(stderr, "EE: No entries processable found...\n");
 		return 0;
 	}
 	long minproc=LONG_MAX;
 	long maxproc=-1;
-	tmp=root->next;
+	tmp=woroot->next;
 	while(tmp != NULL){
 		if(minproc > tmp->processstart && tmp->processstart > 0){
 			minproc = tmp->processstart;
@@ -158,34 +160,34 @@ int gatherMTAData(void){
 		}
 		tmp=tmp->next;
 	}
-	tmp=root->next;
+	tmp=woroot->next;
 	cout << "Minimizing epochs: (" << minproc << "," << maxproc << ") to: (0," << (maxproc-minproc) << ")" << endl;
 	maxproc=maxproc-minproc;
-	root->next->normalize(minproc,maxproc);
+	woroot->next->normalize(minproc,maxproc);
 	minproc=0;
-	tmp = root->next;
+	tmp = woroot->next;
 	//Let's translate x (and y initially...)
 	while(tmp){
 		//preset to CCW...
 		//cout << "Transforming ( " << tmp->processstart << "," << tmp->processend << ") to: ";
-		tmp->x1=(1.9*tmp->processend/maxproc)-1.0f;
+		tmp->x1=(1.9*tmp->processend/maxproc)-0.95f;
 		tmp->x2=tmp->x1;
-		tmp->x3=(1.9*tmp->processstart/maxproc)-1.0f;
+		tmp->x3=(1.9*tmp->processstart/maxproc)-0.95f;
 		tmp->x4=tmp->x3;
 		//cout << "(" << tmp->x1 << "," << tmp->x3 << ")" << endl;
 		tmp=tmp->next;
 	}
 	int count = 1;
 	//Order them by size
-	tmp=root->findUnassignedMax(root);
-	while(!root->isSizeFinished()){
+	tmp=woroot->findUnassignedMax(woroot);
+	while(!woroot->isSizeFinished()){
 		count++;
 		tmp->sizeIndex=count;
 		//cout << "id: " << tmp->fullid << " . size " << tmp->processend - tmp->processstart << ". count... " << count << endl;
-		tmp=root->findUnassignedMax(root);
+		tmp=woroot->findUnassignedMax(woroot);
 	}
-	root->processend=maxproc;//We need to have this preserved to -1 until after the sizeOrder...
-	tmp = root->next;
+	woroot->processend=maxproc;//We need to have this preserved to -1 until after the sizeOrder...
+	tmp = woroot->next;
 	srand(time(0));
 	while(tmp != NULL){
 		if(tmp->r == 0.0f && tmp->g == 0.0f && tmp->b == 0.0f){
@@ -202,7 +204,7 @@ void resolveOverlaps(int count){
 	wostat *tmpA, *tmpB;
 	cout << "We got " << count << " items " << endl;
 	for(int iterA = 1;iterA <= count;iterA++){
-		tmpA=root->getItemBySizeIndex(iterA);
+		tmpA=woroot->getItemBySizeIndex(iterA);
 		if(!tmpA){
 			continue;
 		}
@@ -212,17 +214,17 @@ void resolveOverlaps(int count){
 		while(!isFree){
 			isFree=true;
 			for(int iterB = 1;iterB < iterA;iterB++){
-				tmpB=root->getItemBySizeIndex(iterB);
+				tmpB=woroot->getItemBySizeIndex(iterB);
 				if(!tmpB){
 					continue;
 				}
 				if(tmpA->y1 == tmpB->y1 && tmpA->processstart <= tmpB->processend && tmpB->processstart <= tmpA->processend){
-					tmpA->y1+=root->ystep;
+					tmpA->y1+=woroot->ystep;
 					iterB=1;
 				}
 			}
 			if(!isFree){
-				tmpA->y1+=root->ystep;
+				tmpA->y1+=woroot->ystep;
 			}else{
 				tmpA->raise(tmpA->y1);
 			}
@@ -233,7 +235,7 @@ void resolveOverlaps(int count){
 }
 void printWebGL(){
 	cout << "vertices = [" << endl;
-	wostat *tmp = root->next;
+	wostat *tmp = woroot->next;
 	while(tmp != NULL){
 		//MEH, IBOs next time
 		cout << tmp->x1 << "," << tmp->y1 << ",0.0," << endl;
@@ -249,7 +251,7 @@ void printWebGL(){
 	}
 	cout << "];" << endl;
 	cout << "colors = [" << endl;
-	tmp = root->next;
+	tmp = woroot->next;
 	//Colorize different IDs
 	while(tmp != NULL){
 		//MEH, IBOs next time
@@ -281,15 +283,15 @@ void init(){
 		print_log(program);
 		return;
 	}
-	root->initAll();
+	woroot->initAll();
 	glUseProgram(program);
 	/*glVertexAttribPointer(vPosition,2,GL_FLOAT,GL_FALSE,0,0);
 	glEnableVertexAttribArray(vPosition);*/
 }
 void display(void){
 	glClear(GL_COLOR_BUFFER_BIT);
-	root->displayAll();
-	//root->next->onDisplay();
+	woroot->displayAll();
+	//woroot->next->onDisplay();
 	glFlush();
 }
 

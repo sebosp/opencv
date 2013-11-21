@@ -10,7 +10,7 @@ public:
 	GLfloat x2,y2,z2;
 	GLfloat x3,y3,z3;
 	GLfloat x4,y4,z4;
-	GLfloat ystep;
+	GLfloat ystep,yoffset;
 	std::string pid,wostart,woseq,aid,fullid,depid;
 	long processstart,processend;
 	int size,soft,hard,sent;

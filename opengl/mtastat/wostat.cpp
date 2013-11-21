@@ -19,8 +19,9 @@ wostat::wostat(std::string nwostart,std::string npid,std::string nwoseq,long npr
 	processstart=nprocessstart;
 	processend=-1;
 	//preorganized to CCW so 45,135,225,315 degrees...
-	ystep=0.03f;
-	y1=10.0f;//y2=y1-ystep;y3=y1-ystep;y4=y1; //We screwed up root!
+	ystep=0.02f;
+	yoffset=0.001f;
+	y1=10.0f;//y2=y1-ystep;y3=y1-ystep;y4=y1;
 	r=0.0f;g=0.0f;b=0.0f;
 	fullid=npid+nwostart+nwoseq;
 	unsigned pos = this->woseq.find("-");
@@ -34,8 +35,8 @@ wostat::~wostat(){
 }
 void wostat::raise(float newy){
 	this->y1=newy;
-	this->y2=this->y1-this->ystep;
-	this->y3=this->y1-this->ystep;
+	this->y2=this->y1+this->ystep;
+	this->y3=this->y1+this->ystep;
 	this->y4=this->y1;
 }
 bool wostat::detectOverlaps(long min, long max,GLfloat height,std::string refid){
@@ -161,12 +162,12 @@ void wostat::normalize(long min,long max){
 void wostat::init_resources(){
 	glGenVertexArrays(NumVAOs,VAOs);
 	glBindVertexArray(VAOs[WOTimes]);
-	//Should also be [NumVertices][NumVertexAttribs]
+	//Should also be [NumVertices][NumVertexAttribs]//This is CCW
 	GLfloat vertices[4][7] = {
-		{ this->x1,this->y1,this->z1,this->r,this->g,this->b,this->alpha},
-		{ this->x2,this->y2,this->z2,this->r,this->g,this->b,this->alpha},
-		{ this->x3,this->y3,this->z3,this->r,this->g,this->b,this->alpha},
-		{ this->x4,this->y4,this->z4,this->r,this->g,this->b,this->alpha},
+		{ this->x1,this->y1-this->yoffset,this->z1,this->r,this->g,this->b,this->alpha},
+		{ this->x2,this->y2+this->yoffset,this->z2,this->r,this->g,this->b,this->alpha},
+		{ this->x3,this->y3+this->yoffset,this->z3,this->r,this->g,this->b,this->alpha},
+		{ this->x4,this->y4-this->yoffset,this->z4,this->r,this->g,this->b,this->alpha},
 	};
         glGenBuffers(NumBuffers,Buffers);
         glBindBuffer(GL_ARRAY_BUFFER,Buffers[ArrayBuffer]);
@@ -194,7 +195,7 @@ void wostat::init_resources(){
 
 void wostat::onDisplay(){
         glBindVertexArray(VAOs[WOTimes]);
-        glDrawArrays(GL_POINTS,0,NumVertices);
+        glDrawArrays(GL_LINE_LOOP,0,NumVertices);
 }
 void wostat::printID(){
 	std::cout << this->pid+this->wostart+this->woseq << std::endl;
