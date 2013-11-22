@@ -23,6 +23,7 @@ wostat::wostat(std::string nwostart,std::string npid,std::string nwoseq,long npr
 	yoffset=0.005f;
 	y1=10.0f;//y2=y1-ystep;y3=y1-ystep;y4=y1;
 	r=0.0f;g=0.0f;b=0.0f;
+	aid="";
 	fullid=npid+nwostart+nwoseq;
 	unsigned pos = this->woseq.find("-");
 	depid = this->wostart+this->pid+(pos != std::string::npos?this->woseq.substr(0,pos):this->woseq);
@@ -82,10 +83,10 @@ void wostat::infect(GLfloat nr,GLfloat ng,GLfloat nb,GLfloat nalpha,std::string 
 }
 void wostat::infectAID(GLfloat nr,GLfloat ng,GLfloat nb,GLfloat nalpha,std::string refaid){
 	if(this->aid == refaid){
-		r=nr;g=ng;b=nb;alpha=nalpha;
+		this->r=nr;this->g=ng;this->b=nb;this->alpha=nalpha;
 	}
 	if(this->next){
-		this->next->infect(nr,ng,nb,nalpha,refaid);
+		this->next->infectAID(nr,ng,nb,nalpha,refaid);
 	}
 }
 bool wostat::exists(std::string nwostart,std::string npid,std::string nwoseq){
@@ -137,12 +138,12 @@ bool wostat::update(std::string nwostart,std::string npid,std::string nwoseq, st
 		if(this->processstart > nprocessend){//Lil' sanity check
 			return false;
 		}
-		aid=naid;
-		size=nsize;
-		soft=nsoft;
-		hard=nhard;
-		processend=nprocessend;
-		sent=nsent;
+		this->aid=naid;
+		this->size=nsize;
+		this->soft=nsoft;
+		this->hard=nhard;
+		this->processend=nprocessend;
+		this->sent=nsent;
 		return true;
 	}else{
 		if(this->next != NULL){
