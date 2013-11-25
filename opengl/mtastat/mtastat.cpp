@@ -301,7 +301,7 @@ int main(int argc, char* argv[]){
 	//progression, every 500 lines it takes 2.5 times more than before to order.
 	int numUnits=gatherMTAData();
 	resolveOverlaps(numUnits);
-	woroot->printAll();
+	//woroot->printAll();
 	if (numUnits < 1){
 		cout << "MTA Data not found:" << endl;
 		return EXIT_FAILURE;

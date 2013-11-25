@@ -19,11 +19,12 @@ wostat::wostat(std::string nwostart,std::string npid,std::string nwoseq,long npr
 	processstart=nprocessstart;
 	processend=-1;
 	//preorganized to CCW so 45,135,225,315 degrees...
-	ystep=0.02f;
+	ystep=0.0201f;
 	yoffset=0.005f;
 	y1=10.0f;//y2=y1-ystep;y3=y1-ystep;y4=y1;
 	r=0.0f;g=0.0f;b=0.0f;
 	aid="";
+	z1=z2=z3=z4=0.0f;
 	fullid=npid+nwostart+nwoseq;
 	unsigned pos = this->woseq.find("-");
 	depid = this->wostart+this->pid+(pos != std::string::npos?this->woseq.substr(0,pos):this->woseq);
@@ -36,8 +37,8 @@ wostat::~wostat(){
 }
 void wostat::raise(float newy){
 	this->y1=newy;
-	this->y2=this->y1-this->ystep;
-	this->y3=this->y1-this->ystep;
+	this->y2=this->y1+this->ystep;
+	this->y3=this->y1+this->ystep;
 	this->y4=this->y1;
 }
 bool wostat::detectOverlaps(long min, long max,GLfloat height,std::string refid){
@@ -92,19 +93,16 @@ void wostat::infectAID(GLfloat nr,GLfloat ng,GLfloat nb,GLfloat nalpha,std::stri
 bool wostat::exists(std::string nwostart,std::string npid,std::string nwoseq){
 	if(this->wostart == nwostart && this->pid == npid && this->woseq == nwoseq){
 		return true;
-	}else{
-		if(this->next != NULL){
-			return(this->next->exists( nwostart,npid,nwoseq));
-		}
-		return false;
 	}
+	if(this->next != NULL){
+		return(this->next->exists( nwostart,npid,nwoseq));
+	}
+	return false;
 }
 void wostat::add(wostat *tmp){
-	if(this->processstart > tmp->processstart){
+	if(this->processstart > tmp->processstart && tmp->processstart != -1){
 		//This should never happen, we shouldn't be sending before epoch 0 amirite?
-		#ifdef _DEBUG
-		printf("Discarding strange entry with processstart = %l\n",tmp->processstart);
-		#endif
+		std::cout << "Discarding strange entry with processstart = " << tmp->processstart << std::endl;
 		return;
 	}
 	if(this->next){
@@ -160,7 +158,7 @@ void wostat::normalize(long min,long max){
 		this->processstart-=min;
 	}
 	if(this->processend == -1){
-		this->processend = max+10;//basically outside of the map, the process is still running in our window
+		this->processend = max;//basically outside of the map, the process is still running in our window
 	}else{
 		this->processend-=min;
 	}
@@ -173,10 +171,10 @@ void wostat::init_resources(){
 	glBindVertexArray(VAOs[WOTimes]);
 	//Should also be [NumVertices][NumVertexAttribs]//This is CCW
 	GLfloat vertices[4][7] = {
-		{ this->x1,this->y1-this->yoffset,this->z1,this->r,this->g,this->b,this->alpha},
-		{ this->x2,this->y2+this->yoffset,this->z2,this->r,this->g,this->b,this->alpha},
-		{ this->x3,this->y3+this->yoffset,this->z3,this->r,this->g,this->b,this->alpha},
-		{ this->x4,this->y4-this->yoffset,this->z4,this->r,this->g,this->b,this->alpha},
+		{ this->x1,this->y1+this->yoffset,this->z1,this->r,this->g,this->b,this->alpha},
+		{ this->x2,this->y2-this->yoffset,this->z2,this->r,this->g,this->b,this->alpha},
+		{ this->x3,this->y3-this->yoffset,this->z3,this->r,this->g,this->b,this->alpha},
+		{ this->x4,this->y4+this->yoffset,this->z4,this->r,this->g,this->b,this->alpha}
 	};
         glGenBuffers(NumBuffers,Buffers);
         glBindBuffer(GL_ARRAY_BUFFER,Buffers[ArrayBuffer]);
@@ -211,14 +209,10 @@ void wostat::printID(){
 }
 
 void wostat::printAll(){
-	/*std::cout << "wostat.cpp displayAll, x,y" << std::endl;
-	std::cout << this->x1 << "," << this->y1 << std::endl;
-	std::cout << this->x2 << "," << this->y2 << std::endl;
-	std::cout << this->x3 << "," << this->y3 << std::endl;
-	std::cout << this->x4 << "," << this->y4 << std::endl;*/
-	std::cout << "wostat::printAll " << std::endl;
-	std::cout << this->fullid << "," << this->aid << std::endl;
-	std::cout << this->x1 << "," << this->y1 << std::endl;
+	std::cout << "\t\t{" << this->x1 << "f," << this->y1-this->yoffset << "f,1.0f,1.0f,1.0f,1.0f,1.0f}," << std::endl;
+	std::cout << "\t\t{" << this->x2 << "f," << this->y2+this->yoffset << "f,1.0f,1.0f,1.0f,1.0f,1.0f}," << std::endl;
+	std::cout << "\t\t{" << this->x3 << "f," << this->y3+this->yoffset << "f,1.0f,1.0f,1.0f,1.0f,1.0f}," << std::endl;
+	std::cout << "\t\t{" << this->x4 << "f," << this->y4-this->yoffset << "f,1.0f,1.0f,1.0f,1.0f,1.0f}," << std::endl;
 	if(this->next){
 		this->next->printAll();
 	}
