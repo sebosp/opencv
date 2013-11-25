@@ -1,5 +1,5 @@
-#ifndef _WOSEQ_H
-#define _WOSEQ_H
+#ifndef _WOSTAT_H
+#define _WOSTAT_H
 #include <GL/glew.h>
 class wostat{
 private:
