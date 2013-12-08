@@ -79,6 +79,7 @@ sub gatherMTAData{
 		"woseq" => $woseq,
 		"processStart" => $processStart,
 		"processEnd" => -1,
+		"id" => "0_0_0",
 		"x1" => 1.1,#Time start, left
 		"x2" => -1.1,#Time end, right
 		"y1" => WOYSTEP,#low unit, reference start,Bottom
@@ -102,7 +103,6 @@ sub gatherMTAData{
 	my $wsre = qr/^([-0-9: ]{19})\.\d* \d* pbs: \(Q*(\d*)_*(\d*)_(\d*)_([-\d]*)\) Starting on.*/; #Should be a config file so we support more logs.
 	my $were = qr/^([-0-9: ]{19})\.\d* \d* pbs: \(Q*(\d*)_*(\d*)_(\d*)_([-\d]*)\) done with.*; \((\d+)\) (\d+) total, (\d+) S, (\d+) T .R.(\d*),.*/;
 	while(my $line = <$logFile>){
-		print "Processing line $." if(!($.%1000));
 		if($line =~ /$wsre/){
 			$processStart=date_to_epoch($1);
 			if($processStart  < 0){
@@ -150,6 +150,7 @@ sub gatherMTAData{
 					"woseq" => $woseq,
 					"processStart" => -1,#special value we will adjust later to the minimum valid epoch found.
 					"processEnd" => -1,
+					"id" => "$wostart-$pid-$woseq",
 					"sizeIndex"=>0,
 					"y1" => -10,
 					"z" => 0.0,
@@ -157,7 +158,6 @@ sub gatherMTAData{
 				foreach(@pbroot){
 					$_{"y"}+=PBYSTEP;
 				}
-				print "$line\n";
 				$PbCurY+=PBYSTEP;
 			}
 			$woroot{"${wostart}_${pid}_$woseq"}{"aid"}=$aid;
@@ -234,7 +234,6 @@ sub gatherMTAData{
 			$_->{"r"}=0.0;$_->{"g"}=1.0;$_->{"b"}=0.0;
 		}
 	}
-	$minproc=0;
 	#Let's translate x (and y initially...)
 	foreach(keys(%woroot)){
 		#preset to CCW...
@@ -262,7 +261,7 @@ sub gatherMTAData{
 #			infectAID(r,g,b,alpha,$woi->aid); # Let's move this to javascript
 #		}
 #	}
-	return $count;
+	return $minproc;
 }
 sub resolveOverlaps{
 	print "//We got ".scalar(keys(%woroot))." items\n";
@@ -291,7 +290,6 @@ sub resolveOverlaps{
 			#print $woA." vs ".$woFixed[$iter]."\n" if ($curRep <= 6);
 			if($woroot{$woA}{"processStart"} <= $woroot{$woFixed[$iter]}{"processEnd"} && $woroot{$woFixed[$iter]}{"processStart"} <= $woroot{$woA}{"processEnd"}){
 				if($woroot{$woA}{"y1"} == $woroot{$woFixed[$iter]}{"y1"}){
-					print ".";
 					$woroot{$woA}{"y1"}+=WOYSTEP;#raise, we could raise by, say, sent,bounce, and then normalize.i.e. +=$woroot{$woFixed[$iter]}{"sent"}
 					splice(@woFixed,$iter,1);#We won't overlap again.
 					$iter=-1;
@@ -306,26 +304,46 @@ sub resolveOverlaps{
 		}
 		$woroot{$woA}{"y2"}=$woroot{$woA}{"y1"} + WOYSTEP;
 		$curRep++;
-		print "\n";
 	}
 	return;
 	#TODO upload to mongoDB, calculating the same scenario over and over makes no sense.
 }
 sub printWebGL{
+	my $minproc=shift;
 	my @sortedkeys = sort { $woroot{$a}{"sizeIndex"} <=> $woroot{$b}{"sizeIndex"} } keys %woroot;
 	#}}}}
+	print "var minProc = $minproc;\n";
+	print "function loadMTAData(){";
 	foreach my $woA(@sortedkeys){
-		#Should be part of an array or a class.
-		print "wo".$woA."vertices = [";
-		print $woroot{$woA}{"x2"}.",".$woroot{$woA}{"y1"}.",".$woroot{$woA}{"z"}.",";#Bottom right
-		print $woroot{$woA}{"x2"}.",".$woroot{$woA}{"y2"}.",".$woroot{$woA}{"z"}.",";#Top    right 
-		print $woroot{$woA}{"x1"}.",".$woroot{$woA}{"y2"}.",".$woroot{$woA}{"z"}.",";#Top    left
-		print $woroot{$woA}{"x1"}.",".$woroot{$woA}{"y1"}.",".$woroot{$woA}{"z"}.",";#Bottom left
-		print "]\n";
+		foreach("wostart","pid","woseq","x1","x2","y1","y2","id","z","processStart","processEnd","sizeIndex"){
+			if(!exists($woroot{$woA}{$_})){
+				print "no $_: ".Dumper($woroot{$woA});
+			}
+		}
+		print "\tvar mtax_".$woA." = new MTAStat(".
+			$woroot{$woA}{"wostart"}.",".
+			$woroot{$woA}{"pid"}.",".
+			"\"".$woroot{$woA}{"woseq"}."\",".
+			$woroot{$woA}{"x1"}.",".
+			$woroot{$woA}{"x2"}.",".
+			$woroot{$woA}{"y1"}.",".
+			$woroot{$woA}{"y2"}.",".
+			#"\"".$woroot{$woA}{"id"}."\",".
+			$woroot{$woA}{"z"}.",".
+			(exists($woroot{$woA}{"aid"})?$woroot{$woA}{"aid"}:"0").",". #We might have incomplete data...
+			$woroot{$woA}{"processStart"}.",".
+			$woroot{$woA}{"processEnd"}.",".
+			$woroot{$woA}{"sizeIndex"}.",".
+			(exists($woroot{$woA}{"size"})?$woroot{$woA}{"size"}.",".$woroot{$woA}{"soft"}.",".$woroot{$woA}{"sent"}.",".$woroot{$woA}{"hard"}:"0,0,0,0"). #We might have incomplete data...
+		");";
+		print "group.add( mtax_$woA);\n";
 	#	print "wo".$woA."colors = [".$woroot{$woA}{"r"}.",".$woroot{$woA}{"g"}.",".$woroot{$woA}{"b"}."];\n";#Bottom left
 	}
+	print "}\n";
 }
 
-gatherMTAData();
+my $minproc = gatherMTAData();
 resolveOverlaps();
-print printWebGL();
+print printWebGL($minproc);
+#$Data::Dumper::Sortkeys=1;
+#print Dumper(\%woroot);
