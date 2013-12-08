@@ -47,9 +47,8 @@ sub date_to_epoch{
 }
 
 sub isSizeFinished{
-	my %wohash=@_;
-	foreach(keys(%wohash)){
-		if($wohash{$_}{"sizeIndex"} == 0 && $wohash{$_}{"processEnd"} - $wohash{$_}{"processStart"} > -1){
+	foreach(keys(%woroot)){
+		if($woroot{$_}{"sizeIndex"} == 0 && $woroot{$_}{"processEnd"} - $woroot{$_}{"processStart"} > -1){
 			return(0);
 		}
 	}
@@ -57,13 +56,12 @@ sub isSizeFinished{
 }
 
 sub findUnassignedMax{
-	my %wohash=@_;
 	my $maxId="0_0_0";
 	my $curMax = -1;
 	my $woPeriod = 0;
-	foreach(keys(%wohash)){
-		$woPeriod = $wohash{$_}{"processEnd"} - $wohash{$_}{"processStart"};
-        	if($wohash{$_}{"sizeIndex"} == 0 && $woPeriod > $curMax){
+	foreach(keys(%woroot)){
+		$woPeriod = $woroot{$_}{"processEnd"} - $woroot{$_}{"processStart"};
+        	if($woroot{$_}{"sizeIndex"} == 0 && $woPeriod > $curMax){
 	                $curMax = $woPeriod;
 			$maxId = $_;
         	}
@@ -210,7 +208,7 @@ sub gatherMTAData{
 		}else{
 			$woroot{$_}{"processStart"}-=$minproc;
 		}
-		if($woroot{$_}{"processEnd"} == -1){
+		if(!exists($woroot{$_}{"processEnd"}) || $woroot{$_}{"processEnd"} == -1){
 			$woroot{$_}{"processEnd"} = $maxproc;#basically outside of the map, the process is still running in our window
 		}else{
 			$woroot{$_}{"processEnd"}-=$minproc;
@@ -271,34 +269,44 @@ sub resolveOverlaps{
 	my @sortedkeys = sort { $woroot{$a}{"sizeIndex"} <=> $woroot{$b}{"sizeIndex"} } keys %woroot;
 	#}}}}#WTF... vim syntax fail.
 	#Once ordered by size we can save the 
-	my $curRep = 0;
+	my $curRep = 1;
 	foreach my $woA(@sortedkeys){
 		next if($woA eq "0_0_0");
 		$woroot{$woA}{"y1"} = 0.0;
-		$curRep++;
-		my $isFree = 0;
-		my @woFixed=@sortedkeys[0..$curRep];
+		my @woFixed=@sortedkeys[1..$curRep];
+		next if($#woFixed == -1);
 		my $iter = 0;
 		foreach my $key(@woFixed){
-			#Let's remove values that are not relevant to us: stuff we don't overlap and stuff below us.
-			if($woroot{$woA}{"z"} != $woroot{$key}{"z"}||$woroot{$woA}{"y1"} > $woroot{$key}{"y1"} || $woroot{$woA}{"processStart"} > $woroot{$key}{"processEnd"} || $woroot{$key}{"processStart"} > $woroot{$woA}{"processEnd"}){
+			#Let's remove values that are not relevant to us: stuff we don't overlap.
+			if($woroot{$woA}{"z"} != $woroot{$key}{"z"}|| ($woroot{$woA}{"processStart"} > $woroot{$key}{"processEnd"} && $woroot{$key}{"processStart"} > $woroot{$woA}{"processEnd"})||$woA eq $key||$key eq "0_0_0"){
 				splice(@woFixed,$iter,1);
+				#print "Splicing item number [$iter] $key ".$woroot{$woA}{"processStart"}." > ".$woroot{$key}{"processEnd"}." || ".$woroot{$key}{"processStart"}." > ".$woroot{$woA}{"processEnd"}." ".Dumper(\@woFixed) if ($curRep <= 6);
 			}else{
 				$iter++;
 			}
 		}
 		$iter=0;
-		while($iter < $curRep && $#woFixed > -1){#Raise until free
-			if($woroot{$woA}{"processStart"} <= $woroot{$woFixed[$iter]}{"processEnd"} && $woroot{$woFixed[$iter]}{"processStart"} <= $woroot{$woA}{"processEnd"} && $woroot{$woA}{"y1"} == $woroot{$woFixed[$iter]}{"y1"}){
-				#If we overlap then...
-				$woroot{$woA}{"y1"}+=WOYSTEP;#raise, we could raise by, say, sent, and then normalize.i.e. +=$woroot{$woFixed[$iter]}{"sent"}
-				$iter=0;
-			}else{
-				last;
+		#print "**** ".$woA." items = ".$#woFixed." => ".Dumper(\@woFixed) if ($curRep <= 6);
+		while($iter < $#woFixed){#Raise until free
+			#print $woA." vs ".$woFixed[$iter]."\n" if ($curRep <= 6);
+			if($woroot{$woA}{"processStart"} <= $woroot{$woFixed[$iter]}{"processEnd"} && $woroot{$woFixed[$iter]}{"processStart"} <= $woroot{$woA}{"processEnd"}){
+				if($woroot{$woA}{"y1"} == $woroot{$woFixed[$iter]}{"y1"}){
+					print ".";
+					$woroot{$woA}{"y1"}+=WOYSTEP;#raise, we could raise by, say, sent,bounce, and then normalize.i.e. +=$woroot{$woFixed[$iter]}{"sent"}
+					splice(@woFixed,$iter,1);#We won't overlap again.
+					$iter=-1;
+				}else{
+					if($woroot{$woA}{"y1"} > $woroot{$woFixed[$iter]}{"y1"}){#This is below us. no overlap.
+						splice(@woFixed,$iter,1);
+						$iter--;
+					}
+				}
 			}
 			$iter++;
 		}
-		$woroot{$woA}{"y2"}+=$woroot{$woA}{"y1"};
+		$woroot{$woA}{"y2"}=$woroot{$woA}{"y1"} + WOYSTEP;
+		$curRep++;
+		print "\n";
 	}
 	return;
 	#TODO upload to mongoDB, calculating the same scenario over and over makes no sense.
