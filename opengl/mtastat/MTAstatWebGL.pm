@@ -5,6 +5,7 @@ use warnings;
 
 use Time::Local;
 use Data::Dumper;
+$Data::Dumper::Sortkeys=1;
 use Math::BigInt;
 use enum;
 
@@ -24,7 +25,7 @@ use enum qw(
   mont3
 );
 use constant WOYSTEP => 0.0201;
-use constant WOYOFFSET => 0.005;
+use constant WOYOFFSET => 0.002;
 use constant PBYSTEP => 0.0201;
 use constant PBQWARNING => 20;
 use constant PBQCRITICAL => 25;
@@ -315,20 +316,16 @@ sub printWebGL{
 	print "var minProc = $minproc;\n";
 	print "function loadMTAData(){";
 	foreach my $woA(@sortedkeys){
-		foreach("wostart","pid","woseq","x1","x2","y1","y2","id","z","processStart","processEnd","sizeIndex"){
-			if(!exists($woroot{$woA}{$_})){
-				print "no $_: ".Dumper($woroot{$woA});
-			}
-		}
-		print "\tvar mtax_".$woA." = new MTAStat(".
+		next if($woA eq "0_0_0");
+		print "\tvar mtaWo_x_".$woA." = new MTAStat(".
 			$woroot{$woA}{"wostart"}.",".
 			$woroot{$woA}{"pid"}.",".
 			"\"".$woroot{$woA}{"woseq"}."\",".
 			$woroot{$woA}{"x1"}.",".
 			$woroot{$woA}{"x2"}.",".
-			$woroot{$woA}{"y1"}.",".
-			$woroot{$woA}{"y2"}.",".
-			#"\"".$woroot{$woA}{"id"}."\",".
+			($woroot{$woA}{"y1"} + WOYOFFSET).",".
+			($woroot{$woA}{"y2"} - WOYOFFSET).",".
+			"\"".$woroot{$woA}{"id"}."\",".
 			$woroot{$woA}{"z"}.",".
 			(exists($woroot{$woA}{"aid"})?$woroot{$woA}{"aid"}:"0").",". #We might have incomplete data...
 			$woroot{$woA}{"processStart"}.",".
@@ -336,14 +333,21 @@ sub printWebGL{
 			$woroot{$woA}{"sizeIndex"}.",".
 			(exists($woroot{$woA}{"size"})?$woroot{$woA}{"size"}.",".$woroot{$woA}{"soft"}.",".$woroot{$woA}{"sent"}.",".$woroot{$woA}{"hard"}:"0,0,0,0"). #We might have incomplete data...
 		");";
-		print "group.add( mtax_$woA);\n";
+		print "scene.add( mtaWo_x_$woA.printWebGL());\n";
 	#	print "wo".$woA."colors = [".$woroot{$woA}{"r"}.",".$woroot{$woA}{"g"}.",".$woroot{$woA}{"b"}."];\n";#Bottom left
 	}
 	print "}\n";
+	print "function loadPBData(){";
+	print "\tvar mtaPbShape = new THREE.Shape();";
+	print "mtaPbShape.moveTo(1,-1);";
+	foreach(@pbroot){
+		print "mtaPbShape.lineTo(".$_->{"x"}.",".$_->{"y"}.");\n";
+	}
+	print "\tmtaPbPoints = mtaPbShape.createPointsGeometry();";
+	print "\tgroup.add(new THREE.Line( mtaPbPoints, new THREE.LineBasicMaterial( { color: 0x00FF00, linewidth: 0.2 } ) ));\n";
+	print "}";
 }
 
 my $minproc = gatherMTAData();
 resolveOverlaps();
 print printWebGL($minproc);
-#$Data::Dumper::Sortkeys=1;
-#print Dumper(\%woroot);

@@ -7,7 +7,7 @@
 <style>
 body {
 	font-family: Monospace;
-	background-color: #f0f0f0;
+	background-color: #000000;
 	margin: 0px;
 	overflow: hidden;
 }
@@ -52,7 +52,7 @@ MTAStat.prototype.printWebGL = function(){
 	this.woShape.lineTo(this.x1,this.y1);
 	this.woShape.lineTo(this.x2,this.y1);
 	this.woPoints = this.woShape.createPointsGeometry();
-	console.log("Printing...",this.x1," ",this.y1," ",this.x2," ",this.y2);
+	//console.log("Printing...",this.x1," ",this.y1," ",this.x2," ",this.y2);
 	return new THREE.Line( this.woPoints, new THREE.LineBasicMaterial( { color: 0x00FF00, linewidth: 0.2 } ) );
 }
 
@@ -82,7 +82,7 @@ MTAStat.prototype.printWebGL = function(){
 		info.innerHTML = 'WO/PB stas... drag to spin';
 		container.appendChild( info );
 
-		camera = new THREE.PerspectiveCamera( 20, window.innerWidth / window.innerHeight, 1, 1000 );
+		camera = new THREE.PerspectiveCamera(9, window.innerWidth / window.innerHeight, 1, 1000 );
 		camera.position.set( 0, 0, 10 );
 
 		scene = new THREE.Scene();
@@ -94,13 +94,11 @@ MTAStat.prototype.printWebGL = function(){
 		group = new THREE.Object3D();
 		scene.add( group );
 
-///
-		loadMTAData();
-///
-
+		//loadMTAData();
+		loadPBData();
 
 		renderer = new THREE.WebGLRenderer( { antialias: true } );
-		renderer.setClearColor( 0xf0f0f0 );
+		renderer.setClearColor( 0x000000 );
 		renderer.setSize( window.innerWidth, window.innerHeight );
 
 		container.appendChild( renderer.domElement );
