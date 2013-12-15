@@ -52,14 +52,25 @@ void pbstat::normalize(long min,long max){
 	if(this->next != NULL){
 		this->next->normalize(min,max);
 	}
+	int queueSize=(int)((1.0f+this->y)/this->ystep);
+	if(queueSize >= 20){
+		if(queueSize <= 25){
+			this->r=1.0f;this->g=1.0f;this->b=0.0f;
+		}else{
+			this->r=1.0f;this->g=0.0f;this->b=0.0f;
+		}
+	}
 }
 void pbstat::init_resources(){
+	if(!this->next){
+		return;
+	}
 	glGenVertexArrays(NumVAOs,VAOs);
 	glBindVertexArray(VAOs[WOTimes]);
 	//Should also be [NumVertices][NumVertexAttribs]//This is CCW
 	GLfloat vertices[2][7] = {
-		{this->x,-1.0f,this->z,this->r,this->g,this->b,this->alpha},
 		{this->x,this->y,this->z,this->r,this->g,this->b,this->alpha},
+		{this->next->x,this->next->y,this->next->z,this->r,this->g,this->b,this->alpha},
 	};
         glGenBuffers(NumBuffers,Buffers);
         glBindBuffer(GL_ARRAY_BUFFER,Buffers[ArrayBuffer]);
@@ -86,14 +97,44 @@ void pbstat::init_resources(){
 }
 
 void pbstat::onDisplay(){
+	if(!this->next){
+		return;
+	}
         glBindVertexArray(VAOs[WOTimes]);
         glDrawArrays(GL_LINES,0,NumVertices);
 }
 
-void pbstat::printAll(){
-	std::cout << "\t\t{" << this->x << "f," << this->y << "f,1.0f,1.0f,1.0f,1.0f,1.0f}," << std::endl;
+void pbstat::printAll(int severity,std::string curVar){
+	int queueSize=(1.0f + this->y)/this->ystep;
+	int curSeverity = (queueSize<20?0:(queueSize < 25?1:2));
+	//std::cout << "//queueSize = " << queueSize << " - curSeverity = " << curSeverity << " y:" << this->y << " ;" << std::endl;
 	if(this->next){
-		this->next->printAll();
+		if(curSeverity != severity){
+			if(curVar != ""){
+				std::cout << "\ttime" << curVar << ".computeLineDistances();";
+				std::cout << "\tvar object" << curVar << " = new THREE.Line("<< "time" << curVar <<","<< (severity == 0?"low":(severity == 1?"medium":"high")) <<");";
+				std::cout << "\tobjects.push(object" << curVar << ");scene.add(object" << curVar << ");" <<std::endl;
+			}
+			char meh[50] ="\0";
+			sprintf(meh,"%i",this->processstart);curVar=meh;
+			curVar += "_";
+			sprintf(meh,"%i",queueSize);curVar+=meh;
+			
+			std::cout << "\t\t\t\tvar time" << curVar << "= new THREE.Geometry();";
+			std::cout << "\ttime" << curVar << ".vertices.push( new THREE.Vector3(" << this->x << "," << this->y << ",0.0));";
+			std::cout << "\ttime" << curVar << ".vertices.push( new THREE.Vector3(" << this->next->x << "," << this->next->y << ",0.0));";
+		}else{
+			std::cout << "\ttime" << curVar << ".vertices.push( new THREE.Vector3(" << this->x << "," << this->y << ",0.0));";
+			std::cout << "\ttime" << curVar << ".vertices.push( new THREE.Vector3(" << this->next->x << "," << this->next->y << ",0.0));";
+		}
+		
+		this->next->printAll(curSeverity,curVar);
+	}else{
+		if(curVar != ""){
+			std::cout << "\ttime" << curVar << ".computeLineDistances();";
+			std::cout << "\tvar object" << curVar << " = new THREE.Line("<< "time" << curVar <<","<< (queueSize < 20?"low":(queueSize < 25?"medium":"high")) <<");";
+			std::cout << "\tobjects.push(object" << curVar << ");scene.add(object" << curVar << ");" <<std::endl;
+		}
 	}
 }
 void pbstat::displayAll(){

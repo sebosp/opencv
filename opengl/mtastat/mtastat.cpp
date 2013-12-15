@@ -79,15 +79,14 @@ int gatherMTAData(void){
 	woroot->r=r;woroot->g=g;woroot->b=b;
 	wostat *wotmp;
 	pbstat *pbtmp;
+	pbstat *pbtail = pbroot;
 	regex wsre("^([-0-9: ]{19})\\.\\d* \\d* pbs: \\(Q*(\\d*)_*(\\d*)_(\\d*)_([-\\d]*)\\) Starting on.*$",flags);
 	regex were("^([-0-9: ]{19})\\.\\d* \\d* pbs: \\(Q*(\\d*)_*(\\d*)_(\\d*)_([-\\d]*)\\) done with.*; \\((\\d+)\\) (\\d+) total, (\\d+) S, (\\d+) T \\(R.(\\d*),.*$",flags);
 	if (infile.is_open()){
 		while (getline(infile, line)){
 			smatch sm;
 			if(regex_match(line,sm,wsre)){
-				cury+=pbroot->ystep;
-				pbtmp=new pbstat(processstart,cury);
-				pbroot->add(pbtmp);
+				//pbroot->add(pbtmp);
 				/*#ifdef _DEBUG
 				cout << "[II]: start = ";
 				for(i=0;i<sm.size();i++){
@@ -96,7 +95,7 @@ int gatherMTAData(void){
 				#endif*/
 				processstart=date_to_epoch(sm[1]);
 				if(processstart  < 0){
-					cout << "[EE] Could not translate " << sm[1] << " to epoch... bailing..." << endl;
+					cout << "//[EE] Could not translate " << sm[1] << " to epoch... bailing..." << endl;
 					break;
 				}
 				if(sm[3]==""){//This is a initial WO, not a retry WO
@@ -109,10 +108,14 @@ int gatherMTAData(void){
 				woseq=sm[5];
 				wotmp=new wostat(wostart,pid,woseq,processstart);
 				woroot->add(wotmp);
+				cury+=pbroot->ystep;
+				pbtmp=new pbstat(processstart,cury);
+				pbtail->next = pbtmp;
+				pbtail = pbtmp;
 			}else if(regex_match(line,sm,were)){
 				processend=date_to_epoch(sm[1]);
 				if(processend  < 0){
-					cout << "[EE] Could not translate " << sm[1] << " to epoch... bailing..." << endl;
+					cout << "//[EE] Could not translate " << sm[1] << " to epoch... bailing..." << endl;
 					break;
 				}
 				if(sm[3]==""){//This is an initial WO, not a retry WO
@@ -137,22 +140,23 @@ int gatherMTAData(void){
 					cury+=pbroot->ystep;
 				}
 				if(!woroot->update(wostart,pid,woseq,aid,size,soft,hard,processend,sent)){
-					cout << "[EE] Could not update, bad data in wo stats? line " << line << endl;
+					cout << "//[EE] Could not update, bad data in wo stats? line " << line << endl;
 				}
 				cury-=pbroot->ystep;
 				pbtmp=new pbstat(processend,cury);
-				pbroot->add(pbtmp);
+				pbtail->next=pbtmp;
+				pbtail=pbtmp;
 			}else{
-				cout << "[EE]: Pattern not found for line -> " << line << endl;
+				cout << "//[EE]: Pattern not found for line -> " << line << endl;
 			}
 		}
 		infile.close();
 	}else{
-		fprintf(stderr, "EE: Unable to open file\n");
+		fprintf(stderr, "//[EE]: Unable to open file\n");
 		return 0;
 	}
 	if(!woroot->next){
-		fprintf(stderr, "EE: No entries processable found...\n");
+		fprintf(stderr, "//[EE]: No entries processable found...\n");
 		return 0;
 	}
 	long minproc=LONG_MAX;
@@ -174,7 +178,7 @@ int gatherMTAData(void){
 		wotmp=wotmp->next;
 	}
 	wotmp=woroot->next;
-	cout << "Minimizing epochs: (" << minproc << "," << maxproc << ") to: (0," << (maxproc-minproc) << ")" << endl;
+	cout << "//Minimizing epochs: (" << minproc << "," << maxproc << ") to: (0," << (maxproc-minproc) << ")" << endl;
 	maxproc=maxproc-minproc;
 	woroot->next->normalize(minproc,maxproc);
 	pbroot->normalize(minproc,maxproc);
@@ -322,7 +326,7 @@ int main(int argc, char* argv[]){
 	int numUnits=gatherMTAData();
 	resolveOverlaps(numUnits);
 	//woroot->printAll();
-	//pbroot->printAll();
+	pbroot->next->printAll(-1,"");
 	if (numUnits < 1){
 		cout << "MTA Data not found:" << endl;
 		return EXIT_FAILURE;

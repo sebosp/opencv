@@ -262,10 +262,11 @@ sub gatherMTAData{
 #			infectAID(r,g,b,alpha,$woi->aid); # Let's move this to javascript
 #		}
 #	}
-	return $minproc;
+	return ($minproc,$maxproc);
 }
 sub resolveOverlaps{
-	print "//We got ".scalar(keys(%woroot))." items\n";
+	my $maxproc=shift;
+	print "//We got ".scalar(keys(%woroot))." items,sorting keys\n";
 	my @sortedkeys = sort { $woroot{$a}{"sizeIndex"} <=> $woroot{$b}{"sizeIndex"} } keys %woroot;
 	#}}}}#WTF... vim syntax fail.
 	#Once ordered by size we can save the 
@@ -278,7 +279,13 @@ sub resolveOverlaps{
 		my $iter = 0;
 		foreach my $key(@woFixed){
 			#Let's remove values that are not relevant to us: stuff we don't overlap.
-			if($woroot{$woA}{"z"} != $woroot{$key}{"z"}|| ($woroot{$woA}{"processStart"} > $woroot{$key}{"processEnd"} && $woroot{$key}{"processStart"} > $woroot{$woA}{"processEnd"})||$woA eq $key||$key eq "0_0_0"){
+			if(	$woroot{$woA}{"z"} != $woroot{$key}{"z"} ||
+				#abs($woroot{$woA}{"processStart"} - $woroot{$key}{"processStart"}) > $maxproc || #This surprisingly slows it down.
+				($woroot{$woA}{"processStart"} > $woroot{$key}{"processEnd"} &&
+				$woroot{$key}{"processStart"} > $woroot{$woA}{"processEnd"}) ||
+				$woA eq $key ||
+				$key eq "0_0_0"
+			){
 				splice(@woFixed,$iter,1);
 				#print "Splicing item number [$iter] $key ".$woroot{$woA}{"processStart"}." > ".$woroot{$key}{"processEnd"}." || ".$woroot{$key}{"processStart"}." > ".$woroot{$woA}{"processEnd"}." ".Dumper(\@woFixed) if ($curRep <= 6);
 			}else{
@@ -348,6 +355,6 @@ sub printWebGL{
 	print "}";
 }
 
-my $minproc = gatherMTAData();
-resolveOverlaps();
-print printWebGL($minproc);
+my ($epochstart,$maxproc) = (gatherMTAData());
+resolveOverlaps($maxproc);
+print printWebGL($epochstart);

@@ -28,7 +28,7 @@ public:
 	pbstat* getItemBySizeIndex(int sizeIdx);
 	void normalize(long min,long max);
 	void init_resources();
-	void printAll();
+	void printAll(int severity,std::string curVar);
 	void onDisplay();
 	void displayAll();
 	void deleteAll();
