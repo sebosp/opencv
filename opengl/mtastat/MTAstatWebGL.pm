@@ -246,7 +246,7 @@ sub gatherMTAData{
 	}
 	my $pbTopY = 0;
 	foreach(@pbroot){
-		$_->{"x"} = (1.9*$_->{"processStart"}/$maxproc)-0.95;
+		$_->{"x"} = (250*$_->{"processStart"}/$maxproc);
 		$pbTopY = $_->{"queueSize"} if ($pbTopY < $_->{"queueSize"});
 	}
 	$count = 1;
@@ -373,8 +373,6 @@ sub printWebGL{
 		$vertNumber++;
 		$itpb++;
 	}
-	print "\tmtaPbPoints = mtaPbShape.createPointsGeometry();";
-	print "\tgroup.add(new THREE.Line( mtaPbPoints, new THREE.LineBasicMaterial( { color: 0x00FF00, linewidth: 0.2 } ) ));\n";
 	print "}";
 }
 
