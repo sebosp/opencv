@@ -26,7 +26,7 @@ use enum qw(
 );
 use constant WOYSTEP => 0.0201;
 use constant WOYOFFSET => 0.002;
-use constant PBYSTEP => 0.0201;
+use constant PBYSTEP => 8.3333;
 use constant PBQWARNING => 20;
 use constant PBQCRITICAL => 25;
 
@@ -92,7 +92,7 @@ sub gatherMTAData{
 		"a" => 1.0,
 		"sizeIndex"=>0,
 	};
-	my $PbCurY = -1.0;
+	my $PbCurY = 0;
 	push(@pbroot,{
 		"processStart" => $processStart - 1,
 		"y" => $PbCurY,
@@ -244,8 +244,10 @@ sub gatherMTAData{
 		#print "(".$woi->x1.",".$woi->x3.")\n";
 		
 	}
+	my $pbTopY = 0;
 	foreach(@pbroot){
 		$_->{"x"} = (1.9*$_->{"processStart"}/$maxproc)-0.95;
+		$pbTopY = $_->{"queueSize"} if ($pbTopY < $_->{"queueSize"});
 	}
 	$count = 1;
 	#Order them by size
@@ -262,7 +264,7 @@ sub gatherMTAData{
 #			infectAID(r,g,b,alpha,$woi->aid); # Let's move this to javascript
 #		}
 #	}
-	return ($minproc,$maxproc);
+	return ($minproc,$maxproc,$pbTopY);
 }
 sub resolveOverlaps{
 	my $maxproc=shift;
@@ -318,6 +320,7 @@ sub resolveOverlaps{
 }
 sub printWebGL{
 	my $minproc=shift;
+	my $pbTopY=shift;
 	my @sortedkeys = sort { $woroot{$a}{"sizeIndex"} <=> $woroot{$b}{"sizeIndex"} } keys %woroot;
 	#}}}}
 	print "var minProc = $minproc;\n";
@@ -344,17 +347,38 @@ sub printWebGL{
 	#	print "wo".$woA."colors = [".$woroot{$woA}{"r"}.",".$woroot{$woA}{"g"}.",".$woroot{$woA}{"b"}."];\n";#Bottom left
 	}
 	print "}\n";
-	print "function loadPBData(){";
-	print "\tvar mtaPbShape = new THREE.Shape();";
-	print "mtaPbShape.moveTo(1,-1);";
-	foreach(@pbroot){
-		print "mtaPbShape.lineTo(".$_->{"x"}.",".$_->{"y"}.");\n";
+	return if ($#pbroot < 0);
+	print "function loadPBData(geometry){\n";
+	print "var gray = new THREE.Color(0xCCCCCC);\n";
+	print "var green = new THREE.Color(0x00FF00);\n";
+	print "geometry.vertices.push(new THREE.Vector3(-100,0,".$pbroot[0]->{"z"}."));";
+	print "geometry.vertices.push(new THREE.Vector3(".$pbroot[0]->{"x"}.",0,".$pbroot[0]->{"z"}."));";
+	print "geometry.vertices.push(new THREE.Vector3(".$pbroot[0]->{"x"}.",".$pbroot[0]->{"y"}.",".$pbroot[0]->{"z"}."));";
+	print "var heightColor = new THREE.Color(0x".sprintf("%02x",($pbroot[0]->{"y"}*255/$pbTopY))."0000);\n";
+	print "geometry.faces.push(new THREE.Face3(0,1,2));";
+	print "geometry.faces[0].vertexColors = [gray,green,heightColor];\n";
+	my $totpb = $#pbroot;
+	my $itpb = 1;
+	my $vertNumber=3;
+	while($itpb < $totpb){#crap, gotta re-configure Y.
+		#print "geometry.vertices.push(new THREE.Vector3(".$_->{"x"}*100.",".0.",".$_->{"z"}-20."));";
+		print "geometry.vertices.push(new THREE.Vector3(".$pbroot[$itpb]->{"x"}.",0,".$pbroot[$itpb]->{"z"}."));";
+		print "geometry.faces.push(new THREE.Face3(".($vertNumber - 2).",".($vertNumber).",".($vertNumber - 1)."));";
+		print "geometry.faces[".($itpb*2-1)."].vertexColors = [green,heightColor,green];\n";
+		print "heightColor = new THREE.Color(0x".sprintf("%02x",($pbroot[$itpb]->{"y"}*255/$pbTopY))."0000);/*".$pbroot[$itpb]->{"y"}."*255/".$pbTopY."*/";
+		$vertNumber++;
+		print "geometry.vertices.push(new THREE.Vector3(".$pbroot[$itpb]->{"x"}.",".$pbroot[$itpb]->{"y"}.",".$pbroot[$itpb]->{"z"}."));";
+		print "geometry.faces.push(new THREE.Face3(".($vertNumber-2).",".($vertNumber-1).",".($vertNumber)."));";
+		print "geometry.faces[".($itpb*2)."].vertexColors = [green,green,heightColor];\n";
+		$vertNumber++;
+		$itpb++;
 	}
 	print "\tmtaPbPoints = mtaPbShape.createPointsGeometry();";
 	print "\tgroup.add(new THREE.Line( mtaPbPoints, new THREE.LineBasicMaterial( { color: 0x00FF00, linewidth: 0.2 } ) ));\n";
 	print "}";
 }
 
-my ($epochstart,$maxproc) = (gatherMTAData());
+my ($epochstart,$maxproc,$pbTopY) = (gatherMTAData());
+print STDERR "$epochstart,$maxproc,$pbTopY\n";
 resolveOverlaps($maxproc);
-print printWebGL($epochstart);
+print printWebGL($epochstart,$pbTopY);
