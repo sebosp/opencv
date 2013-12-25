@@ -168,11 +168,11 @@ sub gatherMTAData{
 			$woroot{"${wostart}_${pid}_$woseq"}{"processEnd"}=$processEnd;
 			$woroot{"${wostart}_${pid}_$woseq"}{"sent"}=$sent;
 			$PbCurY-=PBYSTEP;
-			push(@pbroot,{
-				"processStart" => $processStart + 0,
-				"y" => $PbCurY,
-				"z" => 0.0,
-			});
+			#push(@pbroot,{
+			#	"processStart" => $processStart + 0,
+			#	"y" => $PbCurY,
+			#	"z" => 0.0,
+			#});
 		}else{
 			print "//[EE]: Pattern not found for line $. -> $line";
 		}
@@ -223,7 +223,7 @@ sub gatherMTAData{
 		}else{
 			$_->{"processStart"}-=$minproc;
 		}
-		my $queueSize=((1.0+$_->{"y"})/WOYSTEP);
+		my $queueSize=($_->{"y"} > 0?$_->{"y"}/PBYSTEP:0);
 		$_->{"queueSize"}=$queueSize;
 		if($queueSize >= PBQWARNING){#These should be the thresholds as in from nagios.
 			if($queueSize <= PBQCRITICAL){
@@ -349,14 +349,14 @@ sub printWebGL{
 	print "}\n";
 	return if ($#pbroot < 0);
 	print "function loadPBData(geometry){\n";
-	print "var gray = new THREE.Color(0xCCCCCC);\n";
+	print "var heightColorOld = new THREE.Color(0xCCCCCC);\n";
 	print "var green = new THREE.Color(0x00FF00);\n";
 	print "geometry.vertices.push(new THREE.Vector3(-100,0,".$pbroot[0]->{"z"}."));";
 	print "geometry.vertices.push(new THREE.Vector3(".$pbroot[0]->{"x"}.",0,".$pbroot[0]->{"z"}."));";
 	print "geometry.vertices.push(new THREE.Vector3(".$pbroot[0]->{"x"}.",".$pbroot[0]->{"y"}.",".$pbroot[0]->{"z"}."));";
-	print "var heightColor = new THREE.Color(0x".sprintf("%02x",($pbroot[0]->{"y"}*255/$pbTopY))."0000);\n";
+	print "var heightColor = new THREE.Color(0x".sprintf("%02x",($pbroot[0]->{"queueSize"}*255/$pbTopY))."0000);\n";
 	print "geometry.faces.push(new THREE.Face3(0,1,2));";
-	print "geometry.faces[0].vertexColors = [gray,green,heightColor];\n";
+	print "geometry.faces[0].vertexColors = [heightColorOld,green,heightColor];\n";
 	my $totpb = $#pbroot;
 	my $itpb = 1;
 	my $vertNumber=3;
@@ -364,12 +364,13 @@ sub printWebGL{
 		#print "geometry.vertices.push(new THREE.Vector3(".$_->{"x"}*100.",".0.",".$_->{"z"}-20."));";
 		print "geometry.vertices.push(new THREE.Vector3(".$pbroot[$itpb]->{"x"}.",0,".$pbroot[$itpb]->{"z"}."));";
 		print "geometry.faces.push(new THREE.Face3(".($vertNumber - 2).",".($vertNumber).",".($vertNumber - 1)."));";
-		print "geometry.faces[".($itpb*2-1)."].vertexColors = [green,heightColor,green];\n";
-		print "heightColor = new THREE.Color(0x".sprintf("%02x",($pbroot[$itpb]->{"y"}*255/$pbTopY))."0000);/*".$pbroot[$itpb]->{"y"}."*255/".$pbTopY."*/";
+		print "geometry.faces[".($itpb*2-1)."].vertexColors = [green,green,heightColor];";#green,green,heightColor
+		print "heightColorOld = heightColor;\n";
+		print "heightColor = new THREE.Color(0x".sprintf("%02x",($pbroot[$itpb]->{"queueSize"}*255/$pbTopY))."0000);/*".$pbroot[$itpb]->{"y"}."*255/".$pbTopY."*/";
 		$vertNumber++;
 		print "geometry.vertices.push(new THREE.Vector3(".$pbroot[$itpb]->{"x"}.",".$pbroot[$itpb]->{"y"}.",".$pbroot[$itpb]->{"z"}."));";
 		print "geometry.faces.push(new THREE.Face3(".($vertNumber-2).",".($vertNumber-1).",".($vertNumber)."));";
-		print "geometry.faces[".($itpb*2)."].vertexColors = [green,green,heightColor];\n";
+		print "geometry.faces[".($itpb*2)."].vertexColors = [heightColorOld,green,heightColor];\n";#heightColor,green,green
 		$vertNumber++;
 		$itpb++;
 	}
